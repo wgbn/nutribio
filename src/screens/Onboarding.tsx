@@ -172,7 +172,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
 
   return (
     <div className="min-h-dvh bg-[#f6f8f7]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-8 pt-14">
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-8 pt-14 md:max-w-xl">
         {/* Brand */}
         <div className="mb-8 flex items-center justify-center gap-2">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600 text-white">

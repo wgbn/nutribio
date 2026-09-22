@@ -1,7 +1,9 @@
-// App shell: onboarding gate, tab navigation and settings overlay.
+// App shell: onboarding gate, responsive navigation (sidebar on desktop,
+// bottom tab bar on mobile) and settings overlay.
 
 import {useState} from 'react';
 
+import {Sidebar} from './components/Sidebar';
 import {TabBar} from './components/TabBar';
 import {StoreProvider, useStore} from './hooks/useStore';
 import {EditData} from './screens/EditData';
@@ -28,16 +30,17 @@ function Shell() {
     return <Settings onClose={() => setSettingsOpen(false)} />;
   }
 
+  const openSettings = () => setSettingsOpen(true);
+
   return (
-    <div className="min-h-dvh bg-[#f6f8f7]">
-      {tab === 'today' ? (
-        <Today onNavigate={setTab} onOpenSettings={() => setSettingsOpen(true)} />
-      ) : null}
-      {tab === 'plan' ? <Plan onOpenSettings={() => setSettingsOpen(true)} /> : null}
+    <div className="min-h-dvh bg-[#f6f8f7] md:pl-64">
+      <Sidebar active={tab} onChange={setTab} onOpenSettings={openSettings} />
+      {tab === 'today' ? <Today onNavigate={setTab} onOpenSettings={openSettings} /> : null}
+      {tab === 'plan' ? <Plan onOpenSettings={openSettings} /> : null}
       {tab === 'progress' ? (
-        <Progress onAddMeasurement={() => setTab('data')} onOpenSettings={() => setSettingsOpen(true)} />
+        <Progress onAddMeasurement={() => setTab('data')} onOpenSettings={openSettings} />
       ) : null}
-      {tab === 'data' ? <EditData onOpenSettings={() => setSettingsOpen(true)} /> : null}
+      {tab === 'data' ? <EditData onOpenSettings={openSettings} /> : null}
       <TabBar active={tab} onChange={setTab} />
     </div>
   );

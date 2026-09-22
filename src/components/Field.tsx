@@ -1,7 +1,7 @@
 // Form primitives: labeled field, text/number inputs (pt-PT comma decimals),
 // select and chip group.
 
-import type {InputHTMLAttributes, ReactNode, SelectHTMLAttributes} from 'react';
+import {useEffect, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes} from 'react';
 
 export function Field({
   label,
@@ -29,7 +29,14 @@ export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${inputClass} ${props.className ?? ''}`} />;
 }
 
-/** Number input that accepts both comma and dot decimals (pt-PT). */
+/**
+ * Number input that accepts both comma and dot decimals (pt-PT).
+ *
+ * Keeps a local draft string while typing so intermediate states like "78,"
+ * are not normalized away before the decimal digits are typed; the parsed
+ * number is committed on every valid keystroke and the display syncs back
+ * from the committed value on blur / external changes.
+ */
 export function NumberInput({
   value,
   onChange,
@@ -38,18 +45,38 @@ export function NumberInput({
   value: number | '';
   onChange: (v: number | '') => void;
 }) {
+  const [draft, setDraft] = useState('');
+  const [focused, setFocused] = useState(false);
+
+  // Sync the draft from the committed value whenever we are not typing.
+  useEffect(() => {
+    if (!focused) setDraft(value === '' ? '' : String(value).replace('.', ','));
+  }, [value, focused]);
+
   return (
     <input
       {...rest}
       type="text"
       inputMode="decimal"
       autoComplete="off"
-      value={value === '' ? '' : String(value).replace('.', ',')}
+      value={draft}
+      onFocus={(e) => {
+        setFocused(true);
+        rest.onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        rest.onBlur?.(e);
+      }}
       onChange={(e) => {
-        const raw = e.target.value.replace(',', '.');
+        const raw = e.target.value;
+        const normalized = raw.replace(',', '.');
+        // Reject anything that is not a valid partial decimal number.
+        if (normalized !== '' && !/^-?\d*\.?\d*$/.test(normalized)) return;
+        setDraft(raw);
         if (raw === '') return onChange('');
-        const n = Number(raw);
-        if (!Number.isNaN(n)) onChange(n);
+        const n = Number(normalized);
+        onChange(Number.isNaN(n) ? '' : n);
       }}
       className={`${inputClass} ${rest.className ?? ''}`}
     />

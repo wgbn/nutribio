@@ -233,7 +233,7 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 pb-28 pt-4">
+    <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 md:pb-12">
       <header
         className="flex items-start justify-between"
         style={{paddingTop: 'env(safe-area-inset-top)'}}
@@ -263,9 +263,10 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
         </div>
       ) : null}
 
+      <div className="mt-4 md:grid md:grid-cols-2 md:items-start md:gap-4">
       {/* Calculation summary */}
       {previewTargets ? (
-        <section className="mt-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+        <section className="mb-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:col-span-2 md:mb-0">
           <h2 className="mb-3 text-sm font-semibold text-slate-700">Resumo dos cálculos</h2>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <div>
@@ -327,7 +328,7 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
       ) : null}
 
       {/* Profile form */}
-      <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+      <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:mt-0">
         <h2 className="text-sm font-semibold text-slate-700">Perfil</h2>
         <Field label="Nome">
           <TextInput value={form.name} onChange={(e) => set('name', e.target.value)} />
@@ -349,7 +350,7 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
       </section>
 
       {/* Goal + exercise */}
-      <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+      <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:mt-0">
         <h2 className="text-sm font-semibold text-slate-700">Objetivo e exercício</h2>
         <Field label="Objetivo">
           <ChipGroup options={GOAL_OPTIONS} value={form.goal} onChange={(v) => set('goal', v)} />
@@ -411,7 +412,7 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
       </section>
 
       {/* Bioimpedance */}
-      <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+      <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:col-span-2 md:mt-4">
         <h2 className="text-sm font-semibold text-slate-700">Bioimpedância (nova medição)</h2>
         <p className="text-xs text-slate-400">
           Preenche apenas os campos que tens da balança. Os que ficarem vazios são ignorados no
@@ -425,7 +426,7 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
             className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
           />
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {BIO_KEYS.map((k) => (
             <Field key={k} label={BIO_LABELS[k]}>
               <NumberInput value={form.bio[k]} onChange={(v) => setBio(k, v)} placeholder="—" />
@@ -433,17 +434,20 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
           ))}
         </div>
       </section>
+      </div>
 
-      <button
-        onClick={handleSave}
-        className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
-      >
-        <SparklesIcon size={16} />
-        Guardar
-      </button>
-      <p className="mt-2 text-center text-xs text-slate-400">
-        Ao guardar, podes optar por gerar um novo plano alimentar.
-      </p>
+      <div className="mx-auto mt-5 max-w-md">
+        <button
+          onClick={handleSave}
+          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
+        >
+          <SparklesIcon size={16} />
+          Guardar
+        </button>
+        <p className="mt-2 text-center text-xs text-slate-400">
+          Ao guardar, podes optar por gerar um novo plano alimentar.
+        </p>
+      </div>
 
       <ConfirmDialog
         open={askGenerate}

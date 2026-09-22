@@ -1,9 +1,12 @@
-// Bottom navigation bar (mobile-first, respects safe area).
+// Navigation: bottom tab bar (mobile) — hidden on desktop where the
+// sidebar takes over. TABS is shared by both.
 
 import type {TabId} from '../types';
 import {CalendarIcon, ChartIcon, ClockIcon, UserIcon, type IconProps} from './icons';
 
-const TABS: Array<{id: TabId; label: string; Icon: (p: IconProps) => React.JSX.Element}> = [
+export type TabDef = {id: TabId; label: string; Icon: (p: IconProps) => React.JSX.Element};
+
+export const TABS: TabDef[] = [
   {id: 'today', label: 'Hoje', Icon: ClockIcon},
   {id: 'plan', label: 'Plano', Icon: CalendarIcon},
   {id: 'progress', label: 'Progresso', Icon: ChartIcon},
@@ -19,7 +22,7 @@ export function TabBar({
 }) {
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden"
       style={{paddingBottom: 'env(safe-area-inset-bottom)'}}
     >
       <div className="mx-auto flex max-w-md">

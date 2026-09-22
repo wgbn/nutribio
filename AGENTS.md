@@ -30,6 +30,11 @@ bioimpedância. 100% frontend, sem backend; todo o estado fica em `localStorage`
 - API key: stored only in `localStorage` via the Settings screen. Never bake it
   into the bundle; `.env.example` exists only as a local-dev note.
 - Meal slots/time windows: `src/lib/mealTimes.ts` (5 slots, breakfast→dinner).
+- Responsive layout: mobile-first with Tailwind breakpoints. Mobile = bottom
+  tab bar (`TabBar`, hidden on `md+`) and stacked sections; desktop (`md+`) =
+  left sidebar (`Sidebar`) + wider `max-w-6xl` containers with multi-column
+  grids (Today 2/3+1/3, Plan totals sidebar + 2-col meals, Dados 2-col forms,
+  Progresso chart 2/3 + chips 1/3, Settings 2-col).
 - PWA: `vite-plugin-pwa` (generateSW) — manifest, precache, installable. Requires
   HTTPS (or localhost) to install on a phone.
 

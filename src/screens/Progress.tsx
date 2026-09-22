@@ -55,7 +55,7 @@ export function Progress({
   const values = points.map((r) => Number(r[metric.key]));
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 pb-28 pt-4">
+    <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 md:pb-12">
       <header
         className="flex items-start justify-between"
         style={{paddingTop: 'env(safe-area-inset-top)'}}
@@ -91,57 +91,59 @@ export function Progress({
         ))}
       </div>
 
-      {points.length < 2 ? (
-        <div className="mt-8 rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-            <ScaleIcon size={24} />
-          </div>
-          <h2 className="text-base font-semibold text-slate-800">
-            {points.length === 0 ? 'Ainda sem dados' : 'Precisas de mais medições'}
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            {points.length === 0
-              ? 'Regista a tua primeira medição da balança de bioimpedância para veres a evolução.'
-              : 'Com pelo menos duas medições, o gráfico mostra a tua evolução.'}
-          </p>
-          <button
-            onClick={onAddMeasurement}
-            className="mt-5 w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
-          >
-            Registrar medição
-          </button>
-        </div>
-      ) : (
-        <div className="mt-4 rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
-          <ChartBlock
-            labels={labels}
-            values={values}
-            label={metric.label}
-            color={metric.color}
-            unit={metric.unit}
-          />
-          <div className="mt-2 flex items-baseline justify-between border-t border-slate-50 pt-3">
-            <span className="text-xs text-slate-400">Última medição</span>
-            <span className="text-lg font-bold tabular-nums text-slate-800">
-              {fmt(values[values.length - 1], 1)} {metric.unit}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Latest summary chips */}
-      {biometrics.latest ? (
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          {METRICS.filter((m) => biometrics.latest?.[m.key] !== undefined).map((m) => (
-            <div key={m.key} className="rounded-2xl border border-slate-100 bg-white px-3 py-2.5 shadow-sm">
-              <p className="text-[11px] text-slate-400">{m.label}</p>
-              <p className="text-sm font-bold tabular-nums text-slate-800">
-                {fmt(biometrics.latest?.[m.key], 1)} {m.unit}
-              </p>
+      <div className="mt-8 md:mt-4 md:grid md:grid-cols-3 md:items-start md:gap-4">
+        {points.length < 2 ? (
+          <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm md:col-span-2">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+              <ScaleIcon size={24} />
             </div>
-          ))}
-        </div>
-      ) : null}
+            <h2 className="text-base font-semibold text-slate-800">
+              {points.length === 0 ? 'Ainda sem dados' : 'Precisas de mais medições'}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {points.length === 0
+                ? 'Regista a tua primeira medição da balança de bioimpedância para veres a evolução.'
+                : 'Com pelo menos duas medições, o gráfico mostra a tua evolução.'}
+            </p>
+            <button
+              onClick={onAddMeasurement}
+              className="mt-5 w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
+            >
+              Registrar medição
+            </button>
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm md:col-span-2">
+            <ChartBlock
+              labels={labels}
+              values={values}
+              label={metric.label}
+              color={metric.color}
+              unit={metric.unit}
+            />
+            <div className="mt-2 flex items-baseline justify-between border-t border-slate-50 pt-3">
+              <span className="text-xs text-slate-400">Última medição</span>
+              <span className="text-lg font-bold tabular-nums text-slate-800">
+                {fmt(values[values.length - 1], 1)} {metric.unit}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Latest summary chips */}
+        {biometrics.latest ? (
+          <div className="mt-4 grid grid-cols-3 gap-2 md:col-span-1 md:mt-0 md:grid-cols-1">
+            {METRICS.filter((m) => biometrics.latest?.[m.key] !== undefined).map((m) => (
+              <div key={m.key} className="rounded-2xl border border-slate-100 bg-white px-3 py-2.5 shadow-sm">
+                <p className="text-[11px] text-slate-400">{m.label}</p>
+                <p className="text-sm font-bold tabular-nums text-slate-800">
+                  {fmt(biometrics.latest?.[m.key], 1)} {m.unit}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
 
       {/* History list */}
       {history.length > 0 ? (
@@ -149,7 +151,7 @@ export function Progress({
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
             Histórico
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-2 md:grid md:grid-cols-2 md:gap-2 md:space-y-0">
             {history.map((r) => (
               <div
                 key={r.date}

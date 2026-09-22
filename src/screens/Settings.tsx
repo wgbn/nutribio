@@ -49,8 +49,8 @@ export function Settings({onClose}: {onClose: () => void}) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#f6f8f7]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-10 pt-4">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#f6f8f7]">
+      <div className="mx-auto flex min-h-dvh w-full max-w-4xl flex-col px-4 pb-10 pt-4">
         <header
           className="mb-4 flex items-center justify-between"
           style={{paddingTop: 'env(safe-area-inset-top)'}}
@@ -71,8 +71,9 @@ export function Settings({onClose}: {onClose: () => void}) {
           </p>
         ) : null}
 
+        <div className="md:grid md:grid-cols-2 md:items-start md:gap-4">
         {/* Gemini */}
-        <section className="space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+        <section className="mb-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:col-span-2 md:mb-0">
           <h2 className="text-sm font-semibold text-slate-700">Gemini</h2>
           <Field
             label="Chave da API"
@@ -122,7 +123,7 @@ export function Settings({onClose}: {onClose: () => void}) {
         </section>
 
         {/* Install */}
-        <section className="mt-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+        <section className="mb-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:mb-0">
           <h2 className="text-sm font-semibold text-slate-700">Aplicação</h2>
           <p className="mt-1 text-xs text-slate-400">
             Instala o Nutribio na home screen do teu telemóvel para o usares como uma app.
@@ -147,7 +148,7 @@ export function Settings({onClose}: {onClose: () => void}) {
         </section>
 
         {/* Data */}
-        <section className="mt-4 space-y-3 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+        <section className="mb-4 space-y-3 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:mb-0">
           <h2 className="text-sm font-semibold text-slate-700">Os teus dados</h2>
           <div className="grid grid-cols-2 gap-2.5">
             <button
@@ -184,6 +185,7 @@ export function Settings({onClose}: {onClose: () => void}) {
             Apagar todos os dados
           </button>
         </section>
+        </div>
 
         <p className="mt-6 text-center text-[11px] text-slate-300">
           Nutribio v0.1 · Dados 100% locais · Sem contas, sem servidores

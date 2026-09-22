@@ -88,7 +88,7 @@ export function Today({
   const busy = generatingNow || isGenerating;
 
   return (
-    <div className="mx-auto w-full max-w-md px-4 pb-28 pt-4">
+    <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 md:pb-12">
       {/* Header */}
       <header
         className="mb-4 flex items-start justify-between"
@@ -129,7 +129,7 @@ export function Today({
 
       {/* No plan */}
       {!plan ? (
-        <div className="mt-10 rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto mt-10 max-w-md rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
             <RestaurantIcon size={28} />
           </div>
@@ -151,10 +151,10 @@ export function Today({
           )}
         </div>
       ) : (
-        <>
+        <div className="md:grid md:grid-cols-2 md:items-start md:gap-4 xl:grid-cols-3">
           {/* Current meal */}
           {current && currentMeal && dish ? (
-            <section className="mb-5">
+            <section className="mb-5 xl:col-span-2">
               <div className="mb-2 flex items-center justify-between">
                 <div>
                   <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
@@ -205,7 +205,7 @@ export function Today({
               </div>
             </section>
           ) : (
-            <section className="mb-5 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <section className="mb-5 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm xl:col-span-2">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
                 Próxima refeição
               </h2>
@@ -220,9 +220,11 @@ export function Today({
             </section>
           )}
 
+          {/* Right column: daily macros + upcoming meals */}
+          <div className="space-y-5">
           {/* Daily macro progress */}
           {targets ? (
-            <section className="mb-5 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+            <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
               <div className="mb-3 flex items-baseline justify-between">
                 <h2 className="text-sm font-semibold text-slate-700">Hoje</h2>
                 <span className="text-xs text-slate-400">vs alvo diário</span>
@@ -294,12 +296,13 @@ export function Today({
               })}
             </div>
           </section>
-        </>
+          </div>
+        </div>
       )}
 
       {/* Generation error */}
       {generationError && !busy ? (
-        <div className="fixed inset-x-0 bottom-24 z-40 mx-auto w-full max-w-md px-4">
+        <div className="fixed inset-x-0 bottom-24 z-40 mx-auto w-full max-w-md px-4 md:bottom-8">
           <div className="rounded-2xl border border-rose-200 bg-white p-4 shadow-lg">
             <p className="text-sm font-medium text-rose-600">{generationError}</p>
             <div className="mt-2.5 flex gap-2">
