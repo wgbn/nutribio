@@ -69,6 +69,18 @@ export function mergeBioRecord(
   return {latest: record, history};
 }
 
+/** Remove a bioimpedance record by date; latest falls back to the newest one. */
+export function removeBioRecord(
+  state: BiometricsState,
+  date: string,
+): BiometricsState {
+  const history = state.history
+    .filter((r) => r.date !== date)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const latest = history.length > 0 ? history[history.length - 1] : null;
+  return {latest, history};
+}
+
 export function clearAllData() {
   Object.values(KEYS).forEach((key) => localStorage.removeItem(key));
   localStorage.removeItem(SCHEMA_VERSION_KEY);

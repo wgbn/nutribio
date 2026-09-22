@@ -18,6 +18,8 @@ function Shell() {
   const {profile} = useStore();
   const [tab, setTab] = useState<TabId>('today');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Incremented when the user asks to register a new measurement (Progress CTA).
+  const [newMeasurementSignal, setNewMeasurementSignal] = useState(0);
   // The onboarding owns the flow (including the "generate now?" dialog),
   // so it stays mounted until the user explicitly finishes it.
   const [onboardingDone, setOnboardingDone] = useState(() => !!profile);
@@ -38,9 +40,17 @@ function Shell() {
       {tab === 'today' ? <Today onNavigate={setTab} onOpenSettings={openSettings} /> : null}
       {tab === 'plan' ? <Plan onOpenSettings={openSettings} /> : null}
       {tab === 'progress' ? (
-        <Progress onAddMeasurement={() => setTab('data')} onOpenSettings={openSettings} />
+        <Progress
+          onAddMeasurement={() => {
+            setNewMeasurementSignal((n) => n + 1);
+            setTab('data');
+          }}
+          onOpenSettings={openSettings}
+        />
       ) : null}
-      {tab === 'data' ? <EditData onOpenSettings={openSettings} /> : null}
+      {tab === 'data' ? (
+        <EditData onOpenSettings={openSettings} newMeasurementSignal={newMeasurementSignal} />
+      ) : null}
       <TabBar active={tab} onChange={setTab} />
     </div>
   );

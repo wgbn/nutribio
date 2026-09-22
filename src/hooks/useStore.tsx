@@ -22,6 +22,7 @@ import {
   loadProfile,
   loadSettings,
   mergeBioRecord,
+  removeBioRecord,
   saveBiometrics,
   savePlan,
   saveProfile,
@@ -41,6 +42,7 @@ interface StoreValue {
   generationError: string | null;
   saveProfile: (profile: Profile) => void;
   saveBioRecord: (record: BioRecord) => void;
+  removeBioRecord: (date: string) => void;
   saveSettings: (patch: Partial<Settings>) => void;
   setSelectedVariation: (day: WeekDayId, slot: MealSlotId, index: number) => void;
   generatePlan: () => Promise<boolean>;
@@ -98,6 +100,10 @@ export function StoreProvider({children}: {children: ReactNode}) {
 
   const handleSaveBioRecord = useCallback((record: BioRecord) => {
     setBiometrics((prev) => mergeBioRecord(prev, record));
+  }, []);
+
+  const handleRemoveBioRecord = useCallback((date: string) => {
+    setBiometrics((prev) => removeBioRecord(prev, date));
   }, []);
 
   const handleSaveSettings = useCallback((patch: Partial<Settings>) => {
@@ -184,6 +190,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
       generationError,
       saveProfile: handleSaveProfile,
       saveBioRecord: handleSaveBioRecord,
+      removeBioRecord: handleRemoveBioRecord,
       saveSettings: handleSaveSettings,
       setSelectedVariation: handleSetSelectedVariation,
       generatePlan: handleGeneratePlan,
@@ -203,6 +210,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
       generationError,
       handleSaveProfile,
       handleSaveBioRecord,
+      handleRemoveBioRecord,
       handleSaveSettings,
       handleSetSelectedVariation,
       handleGeneratePlan,

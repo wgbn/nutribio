@@ -1,11 +1,12 @@
 // "Data" screen: single form with profile, goal/exercise and bioimpedance.
+// Saving a bioimpedance record adds it to the history (dedupe by date).
 // Saving asks whether to regenerate the plan (confirm dialog).
 
-import {useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 
 import {ChipGroup, Field, NumberInput, Select, TextInput} from '../components/Field';
 import {ConfirmDialog} from '../components/ConfirmDialog';
-import {CheckIcon, GearIcon, SparklesIcon} from '../components/icons';
+import {CheckIcon, GearIcon, PencilIcon, SparklesIcon, TrashIcon} from '../components/icons';
 import {useStore} from '../hooks/useStore';
 import {
   computeTargets,
@@ -16,7 +17,7 @@ import {
   SEX_LABELS,
 } from '../lib/calculations';
 import {todayKey} from '../lib/mealTimes';
-import {fmt} from '../lib/units';
+import {fmt, fmtDate} from '../lib/units';
 import type {
   BioRecord,
   ExerciseFrequency,
@@ -108,8 +109,16 @@ const BIO_LABELS: Record<BioNumKey, string> = {
   idealWeight: 'Peso ideal (kg)',
 };
 
-export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
-  const {profile, biometrics, targets, saveProfile, saveBioRecord, generatePlan} = useStore();
+export function EditData({
+  onOpenSettings,
+  newMeasurementSignal = 0,
+}: {
+  onOpenSettings: () => void;
+  /** Increment to start a fresh bioimpedance form (used by Progress' CTA). */
+  newMeasurementSignal?: number;
+}) {
+  const {profile, biometrics, targets, saveProfile, saveBioRecord, removeBioRecord, generatePlan} =
+    useStore();
   const currentTargets = targets;
   const latest = biometrics.latest;
 
@@ -144,6 +153,53 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
   const [askGenerate, setAskGenerate] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [deleteDate, setDeleteDate] = useState<string | null>(null);
+
+  /** Start a fresh measurement form (empty fields, today's date). */
+  const clearBioForm = useCallback(() => {
+    setForm((f) => ({
+      ...f,
+      bioDate: todayKey(),
+      bio: {date: todayKey(), weight: '', bodyFat: '', water: '', bmr: '', visceralFat: '', bmi: '', muscle: '', protein: '', boneMass: '', bodyAge: '', idealWeight: ''},
+    }));
+    setNotice(null);
+  }, []);
+
+  /** Load a past record into the form (saving replaces that date). */
+  const loadRecord = useCallback((record: BioRecord) => {
+    setForm((f) => ({
+      ...f,
+      bioDate: record.date,
+      bio: {
+        date: record.date,
+        weight: toNum(record.weight),
+        bodyFat: toNum(record.bodyFat),
+        water: toNum(record.water),
+        bmr: toNum(record.bmr),
+        visceralFat: toNum(record.visceralFat),
+        bmi: toNum(record.bmi),
+        muscle: toNum(record.muscle),
+        protein: toNum(record.protein),
+        boneMass: toNum(record.boneMass),
+        bodyAge: toNum(record.bodyAge),
+        idealWeight: toNum(record.idealWeight),
+      },
+    }));
+    setNotice(`Medição de ${fmtDate(record.date)} carregada — altera e guarda para atualizar essa data.`);
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }, []);
+
+  /** Prefill the form from the latest record (quick update flow). */
+  const useLatest = useCallback(() => {
+    if (!latest) return;
+    loadRecord(latest);
+    setNotice(null);
+  }, [latest, loadRecord]);
+
+  // External signal: "start a new measurement" (from Progress' CTA).
+  useEffect(() => {
+    if (newMeasurementSignal > 0) clearBioForm();
+  }, [newMeasurementSignal, clearBioForm]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({...f, [key]: value}));
@@ -413,11 +469,31 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
 
       {/* Bioimpedance */}
       <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:col-span-2 md:mt-4">
-        <h2 className="text-sm font-semibold text-slate-700">Bioimpedância (nova medição)</h2>
-        <p className="text-xs text-slate-400">
-          Preenche apenas os campos que tens da balança. Os que ficarem vazios são ignorados no
-          cálculo.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700">Bioimpedância</h2>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Ao guardar, a medição é adicionada ao histórico com a data escolhida. Se a data já
+              estiver registada, essa medição é substituída.
+            </p>
+          </div>
+          <div className="flex gap-1.5">
+            <button
+              type="button"
+              onClick={clearBioForm}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-emerald-300"
+            >
+              Nova medição
+            </button>
+            <button
+              type="button"
+              onClick={useLatest}
+              className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-emerald-300"
+            >
+              Usar última medição
+            </button>
+          </div>
+        </div>
         <Field label="Data da medição">
           <input
             type="date"
@@ -433,6 +509,53 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
             </Field>
           ))}
         </div>
+
+        {/* History list */}
+        {biometrics.history.length > 0 ? (
+          <div className="border-t border-slate-100 pt-4">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Medições registadas ({biometrics.history.length})
+            </h3>
+            <div className="space-y-2">
+              {[...biometrics.history].reverse().map((r) => (
+                <div
+                  key={r.date}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-700">{fmtDate(r.date)}</p>
+                    <p className="truncate text-xs text-slate-400">
+                      {r.weight !== undefined ? `${fmt(r.weight, 1)} kg` : ''}
+                      {r.bodyFat !== undefined ? ` · ${fmt(r.bodyFat, 1)}% gordura` : ''}
+                      {r.bmi !== undefined ? ` · IMC ${fmt(r.bmi, 1)}` : ''}
+                      {r.muscle !== undefined ? ` · ${fmt(r.muscle, 1)} kg músculo` : ''}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      onClick={() => loadRecord(r)}
+                      aria-label={`Editar medição de ${fmtDate(r.date)}`}
+                      className="rounded-lg p-2 text-slate-500 hover:bg-white hover:text-emerald-600"
+                    >
+                      <PencilIcon size={16} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteDate(r.date)}
+                      aria-label={`Apagar medição de ${fmtDate(r.date)}`}
+                      className="rounded-lg p-2 text-slate-500 hover:bg-white hover:text-rose-600"
+                    >
+                      <TrashIcon size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-400">
+            Ainda não registaste nenhuma medição de bioimpedância.
+          </p>
+        )}
       </section>
       </div>
 
@@ -466,6 +589,27 @@ export function EditData({onOpenSettings}: {onOpenSettings: () => void}) {
         busy={generating}
         onConfirm={doGenerate}
         onCancel={skipGenerate}
+      />
+
+      <ConfirmDialog
+        open={deleteDate !== null}
+        title="Apagar esta medição?"
+        message={
+          deleteDate
+            ? `A medição de ${fmtDate(deleteDate)} será removida do histórico. O plano atual não é alterado.`
+            : ''
+        }
+        confirmLabel="Apagar"
+        cancelLabel="Cancelar"
+        variant="danger"
+        onConfirm={() => {
+          if (deleteDate) {
+            removeBioRecord(deleteDate);
+            setNotice('Medição apagada do histórico.');
+          }
+          setDeleteDate(null);
+        }}
+        onCancel={() => setDeleteDate(null)}
       />
     </div>
   );
