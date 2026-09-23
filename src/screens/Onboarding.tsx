@@ -43,6 +43,7 @@ interface FormState {
   frequency: ExerciseFrequency;
   intensity: ExerciseIntensity;
   type: ExerciseType;
+  workoutTime: string;
   excludedFoods: string;
   observations: string;
   bio: {
@@ -102,11 +103,11 @@ export function Onboarding({onDone}: {onDone: () => void}) {
     frequency: 'none',
     intensity: 'moderate',
     type: 'mixed',
+    workoutTime: '',
     excludedFoods: '',
     observations: '',
     bio: emptyBio,
   });
-  const [error, setError] = useState<string | null>(null);
   const [askGenerate, setAskGenerate] = useState(false);
   const [generating, setGenerating] = useState(false);
 
@@ -130,7 +131,6 @@ export function Onboarding({onDone}: {onDone: () => void}) {
   const hasBioData = useMemo(() => Object.values(form.bio).some((v) => v !== ''), [form.bio]);
 
   const commitAndMaybeGenerate = async () => {
-    setError(null);
     if (!basicValid) return;
     saveProfile({
       name: form.name.trim(),
@@ -144,6 +144,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
         frequency: form.exerciseActive ? form.frequency : 'none',
         intensity: form.intensity,
         type: form.type,
+        workoutTime: form.exerciseActive ? form.workoutTime : '',
       },
       excludedFoods: form.excludedFoods.trim(),
       observations: form.observations.trim(),
@@ -160,15 +161,13 @@ export function Onboarding({onDone}: {onDone: () => void}) {
     setAskGenerate(true);
   };
 
+  // Loading overlay + success/error toast are global (GenerationFeedback).
   const doGenerate = async () => {
+    setAskGenerate(false);
     setGenerating(true);
     const ok = await generatePlan();
     setGenerating(false);
-    setAskGenerate(false);
     if (ok) onDone();
-    else setError(
-      'Não foi possível gerar o plano. Verifica se adicionaste a chave da API Gemini nas Definições.',
-    );
   };
 
   const skipGenerate = () => {
@@ -292,6 +291,17 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                       onChange={(e) => set('type', e.target.value as ExerciseType)}
                     />
                   </Field>
+                  <Field
+                    label="Horário do treino"
+                    hint="Serve para marcar as refeições pré-treino e pós-treino no plano."
+                  >
+                    <input
+                      type="time"
+                      value={form.workoutTime}
+                      onChange={(e) => set('workoutTime', e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                    />
+                  </Field>
                 </div>
               ) : (
                 <p className="text-xs text-slate-400">
@@ -299,10 +309,6 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                 </p>
               )}
             </div>
-
-            {error ? (
-              <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>
-            ) : null}
 
             <button
               onClick={() => setStep(1)}
@@ -334,9 +340,6 @@ export function Onboarding({onDone}: {onDone: () => void}) {
               ))}
             </div>
 
-            {error ? (
-              <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>
-            ) : null}
 
             <div className="flex gap-2.5">
               <button
@@ -394,9 +397,6 @@ export function Onboarding({onDone}: {onDone: () => void}) {
               />
             </Field>
 
-            {error ? (
-              <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>
-            ) : null}
 
             <div className="flex gap-2.5">
               <button

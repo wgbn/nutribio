@@ -6,6 +6,43 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-09-23 — IDE lint config + onboarding cleanup
+
+- Added `.vscode/settings.json` with `css.lint.unknownAtRules: "ignore"` —
+  silences the false-positive "Unknown at rule @theme" warning (Tailwind v4
+  at-rule, valid and processed by the build).
+- Removed leftover blank lines in Onboarding after the error-block cleanup.
+
+## 2026-09-23 — Global generation feedback (loading overlay + result toast)
+
+- New `GenerationFeedback` component (rendered in App for every branch,
+  including onboarding/settings): a full-screen overlay (spinner + stage text
+  + hint) while `isGenerating`, and a toast when generation finishes.
+- Success toast "Plano gerado com sucesso!" (with "Ver plano" action that
+  switches to the Plan tab); error toast with the message + "Tentar de novo"
+  action; auto-dismiss after 6 s; toast slide-in animation in `index.css`.
+- Removed the now-duplicated per-screen generation feedback: Today's inline
+  error box, EditData's generation notices and `generating` state, and
+  Onboarding's inline `error` state/display. Generation feedback now has a
+  single global channel.
+
+## 2026-09-23 — Workout time + dynamic pré/pós-treino badges
+
+- `Exercise` gained `workoutTime` ("HH:MM"), collected in onboarding (time
+  input shown when exercise = "Sim") and editable in Dados; normalized for old
+  profiles in `loadProfile`.
+- New helpers in `mealTimes.ts`: `parseTimeToMinutes`, `workoutMealIds`
+  (preId = meal window containing the workout time / last meal before it;
+  postId = next meal / first meal of the day), `workoutBadgeFor`.
+- The afternoon snack was renamed from "Lanche / pós-treino" to
+  "Lanche da tarde" (mealTimes, mealLabel, Gemini rule 2).
+- Badges "Pré-treino"/"Pós-treino" rendered on MealCard (Plan) and Today
+  (current meal + upcoming meals), driven by the store's derived
+  `workoutMeals`.
+- Gemini prompt: new "## Treino" block (time + pre-workout meal: reinforce
+  moderate-digestion carbs + protein; post-workout meal: reinforce protein +
+  carbs for recovery) when active + time set. Meal split unchanged.
+
 ## 2026-09-23 — GitHub Pages deployment
 
 - `vite.config.ts`: `base = process.env.BASE_PATH || '/'` (local dev/root

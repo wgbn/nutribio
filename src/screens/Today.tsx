@@ -14,6 +14,7 @@ import {
   startsInLabel,
   timeWindowLabel,
   todayKey,
+  workoutBadgeFor,
 } from '../lib/mealTimes';
 import {dayTotals, getSelectedDish} from '../lib/plan';
 import {fmt, fmtDate} from '../lib/units';
@@ -48,12 +49,11 @@ export function Today({
     profile,
     plan,
     targets,
+    workoutMeals,
     planIsCurrent,
     isGenerating,
     generationStage,
-    generationError,
     generatePlan,
-    dismissGenerationError,
     setSelectedVariation,
   } = useStore();
   const [generatingNow, setGeneratingNow] = useState(false);
@@ -157,9 +157,23 @@ export function Today({
             <section className="mb-5 xl:col-span-2">
               <div className="mb-2 flex items-center justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
-                    Agora · {currentMeal.label}
-                  </h2>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-600">
+                      Agora · {currentMeal.label}
+                    </h2>
+                    {workoutBadgeFor(currentMeal.id, workoutMeals) ? (
+                      <span
+                        className={
+                          'rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ' +
+                          (workoutBadgeFor(currentMeal.id, workoutMeals) === 'Pré-treino'
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-sky-100 text-sky-700')
+                        }
+                      >
+                        {workoutBadgeFor(currentMeal.id, workoutMeals)}
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="text-xs text-slate-400">{currentMeal.timeWindow}</p>
                 </div>
                 {dish.macros ? <MacroChips macros={dish.macros} /> : null}
@@ -278,7 +292,21 @@ export function Today({
                     className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left shadow-sm active:bg-slate-50"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-700">{slot.label}</p>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-sm font-semibold text-slate-700">{slot.label}</p>
+                        {workoutBadgeFor(slot.id, workoutMeals) ? (
+                          <span
+                            className={
+                              'rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ' +
+                              (workoutBadgeFor(slot.id, workoutMeals) === 'Pré-treino'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-sky-100 text-sky-700')
+                            }
+                          >
+                            {workoutBadgeFor(slot.id, workoutMeals)}
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="truncate text-xs text-slate-400">
                         {preview ? preview.name : 'Sem sugestão'}
                       </p>
@@ -300,28 +328,6 @@ export function Today({
         </div>
       )}
 
-      {/* Generation error */}
-      {generationError && !busy ? (
-        <div className="fixed inset-x-0 bottom-24 z-40 mx-auto w-full max-w-md px-4 md:bottom-8">
-          <div className="rounded-2xl border border-rose-200 bg-white p-4 shadow-lg">
-            <p className="text-sm font-medium text-rose-600">{generationError}</p>
-            <div className="mt-2.5 flex gap-2">
-              <button
-                onClick={handleGenerate}
-                className="flex-1 rounded-xl bg-rose-600 py-2 text-xs font-semibold text-white active:bg-rose-700"
-              >
-                Tentar de novo
-              </button>
-              <button
-                onClick={dismissGenerationError}
-                className="flex-1 rounded-xl border border-slate-200 py-2 text-xs font-medium text-slate-600"
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

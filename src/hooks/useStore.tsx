@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import {computeTargetsFromProfile, effectiveWeight} from '../lib/calculations';
 import {planInputsHash} from '../lib/hash';
+import {parseTimeToMinutes, workoutMealIds, type WorkoutMeals} from '../lib/mealTimes';
 import {assemblePlan} from '../lib/plan';
 import {
   clearAllData,
@@ -35,6 +36,7 @@ interface StoreValue {
   plan: Plan | null;
   settings: Settings;
   targets: NutritionTargets | null;
+  workoutMeals: WorkoutMeals | null;
   inputsHash: string;
   planIsCurrent: boolean;
   isGenerating: boolean;
@@ -91,6 +93,13 @@ export function StoreProvider({children}: {children: ReactNode}) {
     if (!profile) return null;
     return computeTargetsFromProfile(profile, biometrics.latest?.weight);
   }, [profile, biometrics.latest]);
+
+  /** Pre/post-workout meal ids derived from the profile's workout time. */
+  const workoutMeals = useMemo<WorkoutMeals | null>(() => {
+    if (!profile?.exercise.active) return null;
+    const minutes = parseTimeToMinutes(profile.exercise.workoutTime);
+    return minutes === null ? null : workoutMealIds(minutes);
+  }, [profile]);
 
   const planIsCurrent = !!plan && plan.inputsHash === inputsHash;
 
@@ -183,6 +192,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
       plan,
       settings,
       targets,
+      workoutMeals,
       inputsHash,
       planIsCurrent,
       isGenerating,
@@ -203,6 +213,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
       plan,
       settings,
       targets,
+      workoutMeals,
       inputsHash,
       planIsCurrent,
       isGenerating,

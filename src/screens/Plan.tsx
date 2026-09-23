@@ -7,7 +7,7 @@ import {MacroBar} from '../components/MacroBar';
 import {MealCard} from '../components/MealCard';
 import {useStore} from '../hooks/useStore';
 import {fmtDateTime} from '../lib/units';
-import {WEEKDAY_LABELS, WEEK_ORDER} from '../lib/mealTimes';
+import {WEEKDAY_LABELS, WEEK_ORDER, workoutBadgeFor} from '../lib/mealTimes';
 import {dayTotals, getSelectedDish} from '../lib/plan';
 import type {WeekDayId} from '../types';
 
@@ -20,8 +20,15 @@ function weekdayIndex(date: Date): number {
 }
 
 export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
-  const {plan, targets, setSelectedVariation, generatePlan, isGenerating, generationStage} =
-    useStore();
+  const {
+    plan,
+    targets,
+    workoutMeals,
+    setSelectedVariation,
+    generatePlan,
+    isGenerating,
+    generationStage,
+  } = useStore();
   const todayDow = WEEK_ORDER[weekdayIndex(new Date())];
   const [selectedDay, setSelectedDay] = useState<WeekDayId>(todayDow);
 
@@ -155,6 +162,7 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
                   key={meal.id}
                   meal={meal}
                   showPicker
+                  badge={workoutBadgeFor(meal.id, workoutMeals)}
                   onPick={(i) => setSelectedVariation(selectedDay, meal.id, i)}
                 />
               ))}

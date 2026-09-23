@@ -175,6 +175,41 @@ Monday-first (`WEEK_ORDER` in `src/lib/plan.ts`) to match the PT convention.
 **Consequences:** Keep the enum and display order in sync when touching
 `plan.ts`/`mealTimes.ts`.
 
+#18. 2026-09-23 — Workout time + dynamic pre/post-workout meal badges
+**Context:** The "pre-workout" meal was hardcoded to the afternoon snack
+("Lanche / pós-treino"). The user trains in the morning and wants the
+pre-workout meal to be breakfast — it can be ANY meal of the day, like a badge
+on an existing meal.
+**Decision:** `Exercise` gains `workoutTime?: string` ("HH:MM", collected in
+onboarding and editable in Dados). `mealTimes.ts` derives `workoutMealIds()`:
+`preId` = the meal slot whose window contains the workout time (or the last
+one ending before it for night workouts; null if none), `postId` = the next
+meal slot (or the first meal of the day when training before breakfast; null
+if none). These are rendered as "Pré-treino"/"Pós-treino" badges on the
+existing meal cards (Today/Plan) and passed to the Gemini prompt in a
+"## Treino" block. The afternoon snack was renamed to "Lanche da tarde".
+The meal split (20/10/30/15/25) is unchanged — the "reinforcement" of pre/post
+meals is instruction to Gemini, not a local calculation.
+**Consequences:** The badge moves with the workout time (no hardcoded slot);
+changing the time invalidates the plan hash (regeneration stays user-confirmed);
+cached plans keep the old label/badges until regenerated (natural, since the
+hash changes).
+
+#19. 2026-09-23 — Single global channel for generation feedback
+**Context:** The user had no visual feedback while a plan was being generated
+and no confirmation when it finished.
+**Decision:** A `GenerationFeedback` component (rendered in App for every
+branch) provides the ONLY generation feedback: a full-screen loading overlay
+while `isGenerating` (spinner + stage text) and a toast when generation ends —
+success ("Plano gerado com sucesso!" + "Ver plano" action) or error (message +
+"Tentar de novo"). The per-screen inline generation feedback (Today's error
+box, EditData/Onboarding error text) was removed to avoid duplication; the
+store still exposes `isGenerating`/`generationStage`/`generationError` for
+screen-level logic.
+**Consequences:** One source of truth for generation state UX; any new
+generation trigger automatically gets overlay + toast; do not reintroduce
+per-screen generation error UI.
+
 #18. 2026-09-23 — GitHub Pages deployment (project site, GitHub Actions)
 **Context:** The user wants the code hosted on their GitHub repo with GitHub
 Pages serving the built site at `https://<user>.github.io/nutribio/`.

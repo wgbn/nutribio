@@ -35,11 +35,15 @@ function write(key: string, value: unknown) {
 export const loadProfile = (): Profile | null => {
   const p = read<Profile | null>(KEYS.profile, null);
   if (!p) return null;
-  // Normalize profiles saved before excludedFoods/observations existed.
+  // Normalize profiles saved before excludedFoods/observations/workoutTime existed.
   return {
     ...p,
     excludedFoods: p.excludedFoods ?? '',
     observations: p.observations ?? '',
+    exercise: {
+      ...p.exercise,
+      workoutTime: p.exercise.workoutTime ?? '',
+    },
   };
 };
 

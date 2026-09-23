@@ -176,7 +176,7 @@ export function mealLabel(id: MealSlotId): string {
     case 'lunch':
       return 'Almoço';
     case 'afternoon_snack':
-      return 'Lanche / pós-treino';
+      return 'Lanche da tarde';
     case 'dinner':
       return 'Jantar';
   }

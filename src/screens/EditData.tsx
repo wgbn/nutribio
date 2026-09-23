@@ -73,6 +73,7 @@ interface FormState {
   frequency: ExerciseFrequency;
   intensity: ExerciseIntensity;
   type: ExerciseType;
+  workoutTime: string;
   bioDate: string;
   bio: BioForm;
 }
@@ -133,6 +134,7 @@ export function EditData({
     frequency: profile?.exercise.frequency ?? 'none',
     intensity: profile?.exercise.intensity ?? 'moderate',
     type: profile?.exercise.type ?? 'mixed',
+    workoutTime: profile?.exercise.workoutTime ?? '',
     bioDate: todayKey(),
     bio: {
       date: todayKey(),
@@ -151,7 +153,6 @@ export function EditData({
   }));
 
   const [askGenerate, setAskGenerate] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [deleteDate, setDeleteDate] = useState<string | null>(null);
 
@@ -255,6 +256,7 @@ export function EditData({
         frequency: form.exerciseActive ? form.frequency : 'none',
         intensity: form.intensity,
         type: form.type,
+        workoutTime: form.exerciseActive ? form.workoutTime : '',
       },
       // Kept from the stored profile: editable in Definições (diet preferences).
       excludedFoods: profile?.excludedFoods ?? '',
@@ -274,16 +276,11 @@ export function EditData({
     setAskGenerate(true);
   };
 
+  // Feedback (loading overlay + success/error toast) is global — see
+  // GenerationFeedback. Here we just close the dialog and run the generation.
   const doGenerate = async () => {
-    setGenerating(true);
-    const ok = await generatePlan();
-    setGenerating(false);
     setAskGenerate(false);
-    setNotice(
-      ok
-        ? 'Plano gerado com sucesso!'
-        : 'Dados guardados, mas não foi possível gerar o plano. Verifica a chave da API nas Definições.',
-    );
+    await generatePlan();
   };
 
   const skipGenerate = () => {
@@ -466,6 +463,17 @@ export function EditData({
                 onChange={(e) => set('type', e.target.value as ExerciseType)}
               />
             </Field>
+            <Field
+              label="Horário do treino"
+              hint="Serve para marcar as refeições pré-treino e pós-treino no plano."
+            >
+              <input
+                type="time"
+                value={form.workoutTime}
+                onChange={(e) => set('workoutTime', e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-base text-slate-800 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              />
+            </Field>
           </>
         ) : null}
       </section>
@@ -589,7 +597,6 @@ export function EditData({
         }
         confirmLabel="Sim, gerar plano"
         cancelLabel="Só guardar"
-        busy={generating}
         onConfirm={doGenerate}
         onCancel={skipGenerate}
       />

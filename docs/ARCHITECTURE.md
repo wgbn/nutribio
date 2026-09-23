@@ -111,15 +111,17 @@ interface Profile {
     frequency: 'none' | '1_2' | '3_4' | '5_6' | '7';   // sessions/week
     intensity: 'low' | 'moderate' | 'high';
     type: 'cardio' | 'strength' | 'mixed' | 'other';
+    workoutTime?: string;  // "HH:MM" (24h); empty when not set/inactive
   };
   excludedFoods: string;   // free text, empty = none
   observations: string;    // free text (nutritionist instructions)
   updatedAt: number;
 }
 ```
-`loadProfile()` normalizes profiles saved before `excludedFoods`/`observations`
-existed (fills `''`). Any code that writes a profile must carry these two
-fields through (see DECISIONS #11).
+`loadProfile()` normalizes profiles saved before
+`excludedFoods`/`observations`/`workoutTime` existed (fills `''`). Any code
+that writes a profile must carry `excludedFoods`/`observations` through (see
+DECISIONS #11) and set `workoutTime` (see DECISIONS #18).
 
 ### Biometrics
 ```ts
@@ -215,11 +217,27 @@ Labels used in the UI live here too (`GOAL_LABELS`, `SEX_LABELS`,
 ### Prompt structure (PT-PT)
 `Perfil do utilizador` → `Dados de bioimpedância (última medição)` →
 `Cálculos (já feitos — usa estes valores, não recalculas)` →
-`Distribuição calórica por refeição` → **`Restrições e preferências do
-utilizador`** (only when non-empty: excluded foods — "NUNCA incluir estes
-alimentos em nenhum prato"; observations — "considera estas indicações") →
-`Regras obrigatórias` (11 rules, incl. rule 11: respect exclusions and
-observations) → "Devolve APENAS o JSON no schema indicado."
+`Distribuição calórica por refeição` → **`## Treino`** (only when the user is
+active and has a workout time: the time + "Refeição pré-treino: {label} —
+reforça hidratos de digestão moderada e proteína" + "Refeição pós-treino:
+{label} — reforça proteína e hidratos para recuperação") →
+**`Restrições e preferências do utilizador`** (only when non-empty: excluded
+foods — "NUNCA incluir estes alimentos em nenhum prato"; observations —
+"considera estas indicações") → `Regras obrigatórias` (11 rules, incl. rule
+11: respect exclusions and observations) → "Devolve APENAS o JSON no schema
+indicado."
+
+### Workout time & pre/post-workout meals (`src/lib/mealTimes.ts`)
+- `parseTimeToMinutes("HH:MM") → number | null`.
+- `workoutMealIds(minutes) → { preId, postId }`: `preId` = the meal slot whose
+  window contains the workout time; if the time falls outside all windows
+  (night), the last slot that ended before it; null if none. `postId` = the
+  next slot after `preId`; if `preId` is null (workout before breakfast), the
+  first meal of the day; null if there is no next slot.
+- `workoutBadgeFor(mealId, workoutMeals) → 'Pré-treino' | 'Pós-treino' | null`.
+- The store derives `workoutMeals` from `profile.exercise` (only when active +
+  valid time). MealCard/Today/Plan render the badges; the prompt receives the
+  same derivation. Changing the time invalidates the plan hash (DECISIONS #18).
 
 ### JSON schema (`PLAN_SCHEMA`)
 Top level `{ overview?: string, week: DayPlan[] }`; each day `{ day, meals }`;
@@ -265,11 +283,13 @@ Actions: `saveProfile` (bumps `updatedAt`), `saveBioRecord`,
   `<Sidebar/>` (desktop) and `<TabBar/>` (mobile).
 - `newMeasurementSignal` counter: Progress' "Registrar medição" increments it
   and switches to the Dados tab, where EditData clears the bio form.
+- `<GenerationFeedback/>` renders in every branch (including onboarding and
+  settings): global loading overlay + result toast for plan generation.
 
 ### Onboarding (`screens/Onboarding.tsx`) — 3 steps
 1. **Dados básicos**: name, sex (chips), age/height/initial weight (number
-   inputs), goal (chips), exercise toggle (frequency/intensity/type).
-   "Continuar" requires `basicValid`.
+   inputs), goal (chips), exercise toggle (frequency/intensity/type + workout
+   time `<input type="time">` when active). "Continuar" requires `basicValid`.
 2. **Dados da balança** (optional): 11 bioimpedance fields; "Saltar este
    passo (opcional)" or "Continuar".
 3. **Preferências da dieta**: two textareas (`excludedFoods`,
@@ -311,7 +331,8 @@ Actions: `saveProfile` (bumps `updatedAt`), `saveBioRecord`,
 - **Resumo dos cálculos** (live): both BMRs, TDEE, goal calorie range,
   protein/carbs/fat/saturated — recomputed from the form on every change.
 - **Perfil**: name, sex, age, height, initial weight.
-- **Objetivo e exercício**: goal chips + exercise toggle/frequency/intensity/type.
+- **Objetivo e exercício**: goal chips + exercise toggle/frequency/intensity/
+  type + workout time (time input; drives the pré/pós-treino badges).
 - **Bioimpedância**: date + 11 fields (prefilled from latest); "Nova medição"
   (clears), "Usar última medição" (refills); below, the **history list** with
   edit (loads the record into the form) and delete (danger ConfirmDialog).
@@ -338,10 +359,16 @@ Actions: `saveProfile` (bumps `updatedAt`), `saveBioRecord`,
 - `TextArea/TextInput/Select/ChipGroup/Field` — form primitives.
 - `ConfirmDialog` — modal with `busy` state and danger variant.
 - `MacroBar` — value/target progress bar (color-coded).
-- `MealCard` + `MacroChips` — meal slot display; optional variation picker.
+- `MealCard` + `MacroChips` — meal slot display; optional variation picker;
+  optional `badge` prop ("Pré-treino"/"Pós-treino" chip, driven by
+  `workoutBadgeFor`).
 - `DishSwitcher` — arrows + dots + counter.
 - `ChartBlock` — Chart.js line (registered once, offline-safe).
 - `TabBar`/`Sidebar` — share the `TABS` config.
+- `GenerationFeedback` — global generation feedback: loading overlay while
+  `isGenerating` + success/error toast (with "Ver plano"/"Tentar de novo"
+  actions). Rendered in App for every branch (tabs, onboarding, settings);
+  the single channel for generation feedback (DECISIONS #19).
 - `icons.tsx` — inline SVG icon set (stroke style).
 
 ## 11. PWA & responsive

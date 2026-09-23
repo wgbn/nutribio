@@ -13,6 +13,8 @@ export interface Exercise {
   frequency: ExerciseFrequency;
   intensity: ExerciseIntensity;
   type: ExerciseType;
+  /** Workout time of day, "HH:MM" (24h); empty when not set/inactive. */
+  workoutTime?: string;
 }
 
 export interface Profile {

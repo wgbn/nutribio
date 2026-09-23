@@ -13,7 +13,7 @@ export const MEAL_SLOTS: MealSlotDef[] = [
   {id: 'breakfast', label: 'Pequeno-almoço', startMin: 6 * 60, endMin: 9 * 60 + 59},
   {id: 'morning_snack', label: 'Lanche da manhã', startMin: 10 * 60, endMin: 11 * 60 + 59},
   {id: 'lunch', label: 'Almoço', startMin: 12 * 60, endMin: 14 * 60 + 29},
-  {id: 'afternoon_snack', label: 'Lanche / pós-treino', startMin: 14 * 60 + 30, endMin: 18 * 60 + 59},
+  {id: 'afternoon_snack', label: 'Lanche da tarde', startMin: 14 * 60 + 30, endMin: 18 * 60 + 59},
   {id: 'dinner', label: 'Jantar', startMin: 19 * 60, endMin: 22 * 60 + 59},
 ];
 
@@ -25,6 +25,57 @@ export function formatMinutes(minutes: number): string {
 
 export function timeWindowLabel(slot: MealSlotDef): string {
   return `${formatMinutes(slot.startMin)} – ${formatMinutes(slot.endMin)}`;
+}
+
+/** Parse "HH:MM" (24h) into minutes since midnight; null if empty/invalid. */
+export function parseTimeToMinutes(hhmm: string | undefined | null): number | null {
+  if (!hhmm) return null;
+  const match = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
+  if (!match) return null;
+  const h = Number(match[1]);
+  const m = Number(match[2]);
+  if (h > 23 || m > 59) return null;
+  return h * 60 + m;
+}
+
+export interface WorkoutMeals {
+  preId: MealSlotId | null;
+  postId: MealSlotId | null;
+}
+
+/**
+ * Which existing meal slots are the "pré-treino" and "pós-treino" meals,
+ * derived from the workout time of day:
+ * - pre: the slot whose window contains the workout time; if the time falls
+ *   outside all windows, the last slot that ended before it; else null.
+ * - post: the slot right after the pre slot; if pre is null (workout before
+ *   the first meal), the first meal of the day; else null.
+ */
+export function workoutMealIds(workoutMinutes: number): WorkoutMeals {
+  const pre =
+    MEAL_SLOTS.find((s) => workoutMinutes >= s.startMin && workoutMinutes <= s.endMin) ??
+    [...MEAL_SLOTS].reverse().find((s) => s.endMin < workoutMinutes) ??
+    null;
+  if (!pre) {
+    const post = MEAL_SLOTS.find((s) => s.startMin >= workoutMinutes) ?? null;
+    return {preId: null, postId: post?.id ?? null};
+  }
+  const idx = MEAL_SLOTS.findIndex((s) => s.id === pre.id);
+  const post = idx >= 0 && idx < MEAL_SLOTS.length - 1 ? MEAL_SLOTS[idx + 1] : null;
+  return {preId: pre.id, postId: post?.id ?? null};
+}
+
+export type WorkoutBadge = 'Pré-treino' | 'Pós-treino' | null;
+
+/** Badge label for a meal slot given the workout-derived pre/post ids. */
+export function workoutBadgeFor(
+  mealId: MealSlotId,
+  workoutMeals: WorkoutMeals | null,
+): WorkoutBadge {
+  if (!workoutMeals) return null;
+  if (mealId === workoutMeals.preId) return 'Pré-treino';
+  if (mealId === workoutMeals.postId) return 'Pós-treino';
+  return null;
 }
 
 /** Current meal slot based on the local time, or null if outside all windows. */

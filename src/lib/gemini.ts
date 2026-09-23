@@ -13,7 +13,8 @@ import type {
   Profile,
   WeekDayId,
 } from '../types';
-import {GOAL_LABELS, SEX_LABELS} from './calculations';
+import {GOAL_LABELS, mealLabel, SEX_LABELS} from './calculations';
+import {parseTimeToMinutes, workoutMealIds} from './mealTimes';
 import {emptyMealSlot, SLOT_ORDER, WEEK_ORDER} from './plan';
 import {fmt, fmtGrams} from './units';
 
@@ -193,9 +194,30 @@ export function buildPrompt(
       ].filter((l): l is string => l !== null)
     : ['- Sem dados de bioimpedância registados.'];
 
+  const workoutMinutes = profile.exercise.active
+    ? parseTimeToMinutes(profile.exercise.workoutTime)
+    : null;
   const exercise = profile.exercise.active
-    ? `${profile.exercise.frequency} por semana, intensidade ${profile.exercise.intensity}, tipo ${profile.exercise.type}`
+    ? `${profile.exercise.frequency} por semana, intensidade ${profile.exercise.intensity}, tipo ${profile.exercise.type}` +
+      (workoutMinutes !== null ? `, horário do treino ${profile.exercise.workoutTime}` : '')
     : 'não pratica exercício físico';
+
+  const workoutSection = (() => {
+    if (workoutMinutes === null) return '';
+    const {preId, postId} = workoutMealIds(workoutMinutes);
+    const lines = [`- Horário do treino: ${profile.exercise.workoutTime}`];
+    if (preId) {
+      lines.push(
+        `- Refeição pré-treino: ${mealLabel(preId)} — reforça hidratos de digestão moderada e proteína nesta refeição.`,
+      );
+    }
+    if (postId) {
+      lines.push(
+        `- Refeição pós-treino: ${mealLabel(postId)} — reforça proteína e hidratos para recuperação nesta refeição.`,
+      );
+    }
+    return `\n## Treino\n${lines.join('\n')}\n`;
+  })();
 
   const splitLines = targets.mealSplit
     .map((m) => `  - ${m.label}: ${m.percent}% (~${m.kcal} kcal, ${m.proteinG} g prot, ${m.carbsG} g hidr, ${m.fatG} g gor)`)
@@ -240,10 +262,10 @@ ${bioLines.join('\n')}
 
 ## Distribuição calórica por refeição (alvos aproximados)
 ${splitLines}
-${preferencesSection}
+${workoutSection}${preferencesSection}
 ## Regras obrigatórias
 1. 7 dias: segunda, terça, quarta, quinta, sexta, sábado, domingo.
-2. 5 refeições por dia, com EXATAMENTE 3 variações de prato em cada uma: pequeno-almoço, lanche da manhã, almoço, lanche/pós-treino, jantar.
+2. 5 refeições por dia, com EXATAMENTE 3 variações de prato em cada uma: pequeno-almoço, lanche da manhã, almoço, lanche da tarde, jantar.
 3. Quantidades PRECISAS em gramas (pesadas), por exemplo "peito de frango grelhado: 180 g", "batata-doce cozida: 280 g".
 4. Proteína em todas as refeições: frango, peru, peixe (pescada, dourada, robalo, salmão), ovos, atum ao natural, laticínios magros (iogurte natural 0%, queijo fresco magro, leite magro).
 5. Hidratos: batata-doce, arroz, pão integral, aveia, fruta.

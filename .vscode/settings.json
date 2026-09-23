@@ -1,0 +1,5 @@
+{
+  // Tailwind CSS v4 uses @theme/@import at-rules that the built-in CSS
+  // linter does not recognize; they are valid and processed by the build.
+  "css.lint.unknownAtRules": "ignore"
+}

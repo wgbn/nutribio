@@ -28,17 +28,35 @@ export function MealCard({
   meal,
   showPicker = false,
   onPick,
+  badge = null,
 }: {
   meal: MealSlot;
   showPicker?: boolean;
   onPick?: (index: number) => void;
+  /** Dynamic workout badge: 'Pré-treino' | 'Pós-treino' | null. */
+  badge?: 'Pré-treino' | 'Pós-treino' | null;
 }) {
   const dish = getSelectedDish(meal);
+  const badgeClass =
+    badge === 'Pré-treino'
+      ? 'bg-amber-100 text-amber-700'
+      : badge === 'Pós-treino'
+        ? 'bg-sky-100 text-sky-700'
+        : '';
   return (
     <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
       <div className="mb-1 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h4 className="font-semibold text-slate-800">{meal.label}</h4>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h4 className="font-semibold text-slate-800">{meal.label}</h4>
+            {badge ? (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badgeClass}`}
+              >
+                {badge}
+              </span>
+            ) : null}
+          </div>
           <p className="text-xs text-slate-400">{meal.timeWindow}</p>
         </div>
         {dish?.macros ? <MacroChips macros={dish.macros} /> : null}

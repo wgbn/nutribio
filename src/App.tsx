@@ -3,6 +3,7 @@
 
 import {useState} from 'react';
 
+import {GenerationFeedback} from './components/GenerationFeedback';
 import {Sidebar} from './components/Sidebar';
 import {TabBar} from './components/TabBar';
 import {StoreProvider, useStore} from './hooks/useStore';
@@ -25,11 +26,21 @@ function Shell() {
   const [onboardingDone, setOnboardingDone] = useState(() => !!profile);
 
   if (!onboardingDone) {
-    return <Onboarding onDone={() => setOnboardingDone(true)} />;
+    return (
+      <>
+        <Onboarding onDone={() => setOnboardingDone(true)} />
+        <GenerationFeedback onViewPlan={() => setTab('plan')} />
+      </>
+    );
   }
 
   if (settingsOpen) {
-    return <Settings onClose={() => setSettingsOpen(false)} />;
+    return (
+      <>
+        <Settings onClose={() => setSettingsOpen(false)} />
+        <GenerationFeedback onViewPlan={() => setTab('plan')} />
+      </>
+    );
   }
 
   const openSettings = () => setSettingsOpen(true);
@@ -52,6 +63,7 @@ function Shell() {
         <EditData onOpenSettings={openSettings} newMeasurementSignal={newMeasurementSignal} />
       ) : null}
       <TabBar active={tab} onChange={setTab} />
+      <GenerationFeedback onViewPlan={() => setTab('plan')} />
     </div>
   );
 }
