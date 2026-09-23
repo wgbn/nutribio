@@ -3,7 +3,9 @@
     "allow": [
       "Exec(node)",
       "Exec(npx esbuild)",
-      "Exec(sleep)"
+      "Exec(sleep)",
+      "Exec(grep)",
+      "Exec(git checkout)"
     ]
   }
 }
