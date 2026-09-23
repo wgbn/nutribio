@@ -1,12 +1,13 @@
 // Settings overlay: Gemini key, model, PWA install, export/import and reset.
 
-import {useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
 import {ConfirmDialog} from '../components/ConfirmDialog';
 import {Field, Select, TextArea, TextInput} from '../components/Field';
-import {DownloadIcon, TrashIcon, UploadIcon, XIcon} from '../components/icons';
+import {DownloadIcon, RefreshIcon, TrashIcon, UploadIcon, XIcon} from '../components/icons';
 import {useInstallPrompt} from '../hooks/useInstallPrompt';
 import {useStore} from '../hooks/useStore';
+import type {ModelOption} from '../lib/models';
 import {DEFAULT_MODEL, exportAllData, importAllData, MODEL_OPTIONS} from '../lib/storage';
 
 export function Settings({onClose}: {onClose: () => void}) {
@@ -15,7 +16,49 @@ export function Settings({onClose}: {onClose: () => void}) {
   const [showKey, setShowKey] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [models, setModels] = useState<ModelOption[] | null>(null);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  /** Fetch the live model list from the Gemini API (lazy SDK import). */
+  const loadModels = useCallback(async (key: string) => {
+    setModelsLoading(true);
+    setModelsError(false);
+    try {
+      const {fetchAvailableModels} = await import('../lib/models');
+      const list = await fetchAvailableModels(key);
+      setModels(list);
+    } catch {
+      setModelsError(true);
+      setModels(null);
+    } finally {
+      setModelsLoading(false);
+    }
+  }, []);
+
+  // Refresh the model list whenever the API key changes (or is set).
+  useEffect(() => {
+    const key = settings.geminiApiKey.trim();
+    if (!key) {
+      setModels(null);
+      setModelsLoading(false);
+      setModelsError(false);
+      return;
+    }
+    void loadModels(key);
+  }, [settings.geminiApiKey, loadModels]);
+
+  const modelOptions = useMemo(() => {
+    const base = (models ?? MODEL_OPTIONS).map((m) =>
+      typeof m === 'string' ? {value: m, label: m} : {value: m.value, label: m.label},
+    );
+    const hasCurrent = base.some((o) => o.value === settings.model);
+    if (!hasCurrent) {
+      base.push({value: settings.model, label: `${settings.model} (personalizado)`});
+    }
+    return base;
+  }, [models, settings.model]);
 
   const handleExport = () => {
     const blob = new Blob([exportAllData()], {type: 'application/json'});
@@ -97,15 +140,38 @@ export function Settings({onClose}: {onClose: () => void}) {
               </button>
             </div>
           </Field>
-          <Field label="Modelo" hint="Podes usar outro modelo Gemini compatível.">
+          <Field
+            label="Modelo"
+            hint="A lista é carregada da API Gemini; sem chave ou offline usa-se a lista predefinida."
+          >
             <Select
-              options={[
-                ...MODEL_OPTIONS.map((m) => ({value: m, label: m})),
-                {value: settings.model, label: `${settings.model} (personalizado)`},
-              ]}
+              options={modelOptions}
               value={settings.model}
               onChange={(e) => saveSettings({model: e.target.value})}
             />
+            <div className="mt-1.5 flex items-center justify-between gap-2">
+              <p className="text-xs text-slate-400">
+                {modelsLoading
+                  ? 'A carregar modelos…'
+                  : modelsError
+                    ? 'Não foi possível carregar a lista — a mostrar lista predefinida.'
+                    : models
+                      ? `${models.length} modelos disponíveis via API.`
+                      : 'Lista predefinida (sem chave configurada).'}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  const key = settings.geminiApiKey.trim();
+                  if (key) void loadModels(key);
+                }}
+                disabled={modelsLoading || !settings.geminiApiKey.trim()}
+                className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-500 hover:border-emerald-300 hover:text-emerald-600 disabled:opacity-40"
+              >
+                <RefreshIcon size={12} />
+                Atualizar
+              </button>
+            </div>
           </Field>
           {!settings.geminiApiKey ? (
             <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">
