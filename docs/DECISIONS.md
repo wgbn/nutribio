@@ -174,3 +174,19 @@ Monday-first (`WEEK_ORDER` in `src/lib/plan.ts`) to match the PT convention.
 "Hoje" maps the current weekday to the matching `DayPlan`.
 **Consequences:** Keep the enum and display order in sync when touching
 `plan.ts`/`mealTimes.ts`.
+
+#18. 2026-09-23 — GitHub Pages deployment (project site, GitHub Actions)
+**Context:** The user wants the code hosted on their GitHub repo with GitHub
+Pages serving the built site at `https://<user>.github.io/nutribio/`.
+**Decision:** Deploy as a project site (base path `/nutribio/`).
+`vite.config.ts` uses `base = process.env.BASE_PATH || '/'` — the CI workflow
+builds with `BASE_PATH=/nutribio/`, local dev/root deployments keep `/`. The
+PWA manifest (`start_url`/`scope`/icons) is prefixed with `base`,
+`index.html` references public assets relatively (`./`), and
+`navigateFallback` is relative. `.github/workflows/deploy.yml` builds and
+deploys on push to `main` via `actions/deploy-pages` (Pages source must be
+"GitHub Actions"). `public/.nojekyll` guards against Jekyll processing.
+**Consequences:** Live URL is `https://<user>.github.io/nutribio/`; if the
+repo is renamed, update `BASE_PATH` in the workflow. No client-side router
+means no `404.html` fallback is needed. The Gemini key security model is
+unchanged (never in the bundle or repo — see #3).

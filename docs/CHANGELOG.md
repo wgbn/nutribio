@@ -6,6 +6,21 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-09-23 — GitHub Pages deployment
+
+- `vite.config.ts`: `base = process.env.BASE_PATH || '/'` (local dev/root
+  deployments keep `/`; CI builds with `BASE_PATH=/nutribio/`); PWA manifest
+  `start_url`/`scope`/icon `src` and `navigateFallback` are now base-aware so
+  the app works from the GitHub Pages subpath.
+- `index.html`: manifest + icon links switched to relative (`./`) URLs (Vite
+  does not rewrite root-absolute `/` links to `public/` assets).
+- Added `.github/workflows/deploy.yml` (GitHub Actions): `npm ci` → build →
+  `actions/deploy-pages` on push to `main` (Pages source must be "GitHub
+  Actions").
+- Added `public/.nojekyll` to disable Jekyll processing.
+- Repo note: `main` is the source branch; the stray local `github-pages`
+  branch is not used by this deployment.
+
 ## 2026-09-23 — Documentation system + Devin project rules
 
 - Created `docs/ARCHITECTURE.md` (full technical deep-dive) and
