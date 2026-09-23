@@ -171,7 +171,7 @@ export function normalizeWeek(raw: unknown): DayPlan[] {
   return populated;
 }
 
-function buildPrompt(
+export function buildPrompt(
   profile: Profile,
   bio: BioRecord | null,
   targets: NutritionTargets,
@@ -201,6 +201,20 @@ function buildPrompt(
     .map((m) => `  - ${m.label}: ${m.percent}% (~${m.kcal} kcal, ${m.proteinG} g prot, ${m.carbsG} g hidr, ${m.fatG} g gor)`)
     .join('\n');
 
+  const excludedFoods = (profile.excludedFoods ?? '').trim();
+  const observations = (profile.observations ?? '').trim();
+  const preferencesLines: string[] = [];
+  if (excludedFoods) {
+    preferencesLines.push(`- Alimentos a excluir: ${excludedFoods} — NUNCA incluir estes alimentos em nenhum prato.`);
+  }
+  if (observations) {
+    preferencesLines.push(`- Observações gerais do utilizador/nutricionista: ${observations} — considera estas indicações ao criar o plano.`);
+  }
+  const preferencesSection =
+    preferencesLines.length > 0
+      ? `\n## Restrições e preferências do utilizador\n${preferencesLines.join('\n')}\n`
+      : '';
+
   return `Cria um plano alimentar semanal completo, em português de Portugal.
 
 ## Perfil do utilizador
@@ -226,7 +240,7 @@ ${bioLines.join('\n')}
 
 ## Distribuição calórica por refeição (alvos aproximados)
 ${splitLines}
-
+${preferencesSection}
 ## Regras obrigatórias
 1. 7 dias: segunda, terça, quarta, quinta, sexta, sábado, domingo.
 2. 5 refeições por dia, com EXATAMENTE 3 variações de prato em cada uma: pequeno-almoço, lanche da manhã, almoço, lanche/pós-treino, jantar.
@@ -238,6 +252,7 @@ ${splitLines}
 8. Os macros de cada variação de prato devem somar aproximadamente os alvos da refeição correspondente (variação ±10-15%).
 9. A soma dos macros selecionados do dia deve aproximar os totais diários.
 10. Nomes de pratos curtos; notas com dicas de preparação ou trocas.
+11. Respeita rigorosamente os alimentos a excluir e as observações do utilizador indicados em "Restrições e preferências do utilizador" — nenhum prato pode conter alimentos excluídos e as observações devem ser refletidas no plano.
 
 Devolve APENAS o JSON no schema indicado.`;
 }

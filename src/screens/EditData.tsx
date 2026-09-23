@@ -256,6 +256,9 @@ export function EditData({
         intensity: form.intensity,
         type: form.type,
       },
+      // Kept from the stored profile: editable in Definições (diet preferences).
+      excludedFoods: profile?.excludedFoods ?? '',
+      observations: profile?.observations ?? '',
       updatedAt: Date.now(),
     };
     saveProfile(nextProfile);

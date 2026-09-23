@@ -3,7 +3,7 @@
 
 import {useMemo, useState} from 'react';
 
-import {ChipGroup, Field, NumberInput, Select, TextInput} from '../components/Field';
+import {ChipGroup, Field, NumberInput, Select, TextArea, TextInput} from '../components/Field';
 import {ConfirmDialog} from '../components/ConfirmDialog';
 import {LeafIcon, SparklesIcon} from '../components/icons';
 import {useStore} from '../hooks/useStore';
@@ -43,6 +43,8 @@ interface FormState {
   frequency: ExerciseFrequency;
   intensity: ExerciseIntensity;
   type: ExerciseType;
+  excludedFoods: string;
+  observations: string;
   bio: {
     weight: number | '';
     bodyFat: number | '';
@@ -100,6 +102,8 @@ export function Onboarding({onDone}: {onDone: () => void}) {
     frequency: 'none',
     intensity: 'moderate',
     type: 'mixed',
+    excludedFoods: '',
+    observations: '',
     bio: emptyBio,
   });
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +145,8 @@ export function Onboarding({onDone}: {onDone: () => void}) {
         intensity: form.intensity,
         type: form.type,
       },
+      excludedFoods: form.excludedFoods.trim(),
+      observations: form.observations.trim(),
       updatedAt: Date.now(),
     });
     if (hasBioData) {
@@ -183,7 +189,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
 
         {/* Step indicator */}
         <div className="mb-6 flex items-center gap-2">
-          {[0, 1].map((i) => (
+          {[0, 1, 2].map((i) => (
             <div
               key={i}
               className={`h-1.5 flex-1 rounded-full ${i <= step ? 'bg-emerald-600' : 'bg-slate-200'}`}
@@ -306,7 +312,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
               Continuar
             </button>
           </div>
-        ) : (
+        ) : step === 1 ? (
           <div className="space-y-5">
             <div>
               <h1 className="text-2xl font-bold text-slate-800">Dados da balança</h1>
@@ -335,6 +341,66 @@ export function Onboarding({onDone}: {onDone: () => void}) {
             <div className="flex gap-2.5">
               <button
                 onClick={() => setStep(0)}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-600 active:bg-slate-50"
+              >
+                Voltar
+              </button>
+              <button
+                onClick={() => setStep(2)}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
+              >
+                Continuar
+              </button>
+            </div>
+            <button
+              onClick={() => setStep(2)}
+              className="w-full text-center text-sm text-slate-400 underline underline-offset-2 hover:text-slate-600"
+            >
+              Saltar este passo (opcional)
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Preferências da dieta</h1>
+              <p className="mt-1 text-sm text-slate-500">
+                Conta-nos o que não queres na tua dieta e deixa observações gerais (por exemplo,
+                indicações do teu nutricionista). Estas preferências entram no plano sempre que
+                gerares uma dieta nova.
+              </p>
+            </div>
+
+            <Field
+              label="Alimentos a excluir"
+              hint="Escreve os alimentos que nunca queres na dieta (ex.: peixe, cenoura, marisco)."
+            >
+              <TextArea
+                rows={4}
+                placeholder="ex.: peixe, cenoura, marisco…"
+                value={form.excludedFoods}
+                onChange={(e) => set('excludedFoods', e.target.value)}
+              />
+            </Field>
+
+            <Field
+              label="Observações gerais"
+              hint="Condicionantes ou indicações a considerar na dieta (ex.: não ultrapassar 20 g de gordura saturada por dia)."
+            >
+              <TextArea
+                rows={6}
+                placeholder="ex.: não ultrapassar 20 g de gordura saturada por dia; potenciar a proteína nas refeições…"
+                value={form.observations}
+                onChange={(e) => set('observations', e.target.value)}
+              />
+            </Field>
+
+            {error ? (
+              <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>
+            ) : null}
+
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => setStep(1)}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-600 active:bg-slate-50"
               >
                 Voltar

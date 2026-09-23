@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Exec(node)"
+      "Exec(node)",
+      "Exec(npx esbuild)",
+      "Exec(sleep)"
     ]
   }
 }

@@ -32,7 +32,16 @@ function write(key: string, value: unknown) {
   }
 }
 
-export const loadProfile = (): Profile | null => read<Profile | null>(KEYS.profile, null);
+export const loadProfile = (): Profile | null => {
+  const p = read<Profile | null>(KEYS.profile, null);
+  if (!p) return null;
+  // Normalize profiles saved before excludedFoods/observations existed.
+  return {
+    ...p,
+    excludedFoods: p.excludedFoods ?? '',
+    observations: p.observations ?? '',
+  };
+};
 
 export const saveProfile = (profile: Profile) => write(KEYS.profile, profile);
 

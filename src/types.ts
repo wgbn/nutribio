@@ -23,6 +23,10 @@ export interface Profile {
   initialWeight: number; // kg
   goal: Goal;
   exercise: Exercise;
+  /** Foods the user never wants in the diet (free text, one per line/comma). */
+  excludedFoods: string;
+  /** General diet instructions/observations (e.g. from a nutritionist). */
+  observations: string;
   updatedAt: number;
 }
 

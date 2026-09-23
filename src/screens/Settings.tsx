@@ -3,14 +3,14 @@
 import {useRef, useState} from 'react';
 
 import {ConfirmDialog} from '../components/ConfirmDialog';
-import {Field, Select, TextInput} from '../components/Field';
+import {Field, Select, TextArea, TextInput} from '../components/Field';
 import {DownloadIcon, TrashIcon, UploadIcon, XIcon} from '../components/icons';
 import {useInstallPrompt} from '../hooks/useInstallPrompt';
 import {useStore} from '../hooks/useStore';
 import {DEFAULT_MODEL, exportAllData, importAllData, MODEL_OPTIONS} from '../lib/storage';
 
 export function Settings({onClose}: {onClose: () => void}) {
-  const {settings, saveSettings, resetAll} = useStore();
+  const {settings, saveSettings, profile, saveProfile, resetAll} = useStore();
   const {canInstall, installed, promptInstall} = useInstallPrompt();
   const [showKey, setShowKey] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -120,6 +120,40 @@ export function Settings({onClose}: {onClose: () => void}) {
               {DEFAULT_MODEL}).
             </p>
           ) : null}
+        </section>
+
+        {/* Diet preferences */}
+        <section className="mb-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:col-span-2 md:mb-0">
+          <h2 className="text-sm font-semibold text-slate-700">Preferências da dieta</h2>
+          <Field
+            label="Alimentos a excluir"
+            hint="Alimentos que nunca queres na dieta (ex.: peixe, cenoura, marisco)."
+          >
+            <TextArea
+              rows={4}
+              placeholder="ex.: peixe, cenoura, marisco…"
+              value={profile?.excludedFoods ?? ''}
+              onChange={(e) => {
+                if (profile) saveProfile({...profile, excludedFoods: e.target.value});
+              }}
+            />
+          </Field>
+          <Field
+            label="Observações gerais"
+            hint="Condicionantes ou indicações do nutricionista a considerar na dieta."
+          >
+            <TextArea
+              rows={6}
+              placeholder="ex.: não ultrapassar 20 g de gordura saturada por dia…"
+              value={profile?.observations ?? ''}
+              onChange={(e) => {
+                if (profile) saveProfile({...profile, observations: e.target.value});
+              }}
+            />
+          </Field>
+          <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+            Estas restrições entram no prompt do Gemini sempre que geras um novo plano.
+          </p>
         </section>
 
         {/* Install */}

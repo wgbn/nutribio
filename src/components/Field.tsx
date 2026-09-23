@@ -1,7 +1,14 @@
 // Form primitives: labeled field, text/number inputs (pt-PT comma decimals),
 // select and chip group.
 
-import {useEffect, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes} from 'react';
+import {
+  useEffect,
+  useState,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react';
 
 export function Field({
   label,
@@ -79,6 +86,15 @@ export function NumberInput({
         onChange(Number.isNaN(n) ? '' : n);
       }}
       className={`${inputClass} ${rest.className ?? ''}`}
+    />
+  );
+}
+
+export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      {...props}
+      className={`${inputClass} min-h-24 resize-y leading-relaxed ${props.className ?? ''}`}
     />
   );
 }
