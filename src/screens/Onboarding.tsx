@@ -90,8 +90,10 @@ const BIO_FIELDS: Array<{key: keyof FormState['bio']; label: string; hint?: stri
 ];
 
 export function Onboarding({onDone}: {onDone: () => void}) {
-  const {saveProfile, saveBioRecord, generatePlan} = useStore();
+  const {settings, saveSettings, saveProfile, saveBioRecord, generatePlan} = useStore();
   const [step, setStep] = useState(0);
+  const [apiKey, setApiKey] = useState(settings.geminiApiKey);
+  const [showKey, setShowKey] = useState(false);
   const [form, setForm] = useState<FormState>({
     name: '',
     sex: 'male',
@@ -132,6 +134,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
 
   const commitAndMaybeGenerate = async () => {
     if (!basicValid) return;
+    saveSettings({geminiApiKey: apiKey.trim()});
     saveProfile({
       name: form.name.trim(),
       sex: form.sex,
@@ -308,6 +311,31 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                   Sem exercício, o cálculo usa um fator de atividade sedentário.
                 </p>
               )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <Field
+                label="Chave da API Gemini"
+                hint="Necessária para gerar o plano alimentar. Obtém uma chave gratuita em aistudio.google.com/apikey."
+              >
+                <div className="relative">
+                  <TextInput
+                    type={showKey ? 'text' : 'password'}
+                    value={apiKey}
+                    placeholder="Cole a tua chave aqui"
+                    autoComplete="off"
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className="pr-20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey((s) => !s)}
+                    className="absolute inset-y-0 right-1.5 my-auto h-8 rounded-lg px-2.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
+                  >
+                    {showKey ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
+              </Field>
             </div>
 
             <button

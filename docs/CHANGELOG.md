@@ -6,6 +6,22 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-09-24 — Gemini key in onboarding + real API errors surfaced
+
+- Onboarding step 1 ("Dados básicos") now includes the "Chave da API Gemini"
+  field (password + show/hide, optional, hint pointing to
+  aistudio.google.com/apikey). It is saved to `settings` before the
+  "Gerar plano agora?" dialog, so the first generation can succeed right away.
+- New `src/lib/errors.ts` with `describeError(err)`: extracts a readable
+  message from the SDK's errors, including the API JSON body
+  (`{error:{code,status,message}}` → "400 INVALID_ARGUMENT: API key not
+  valid…").
+- `generateWeeklyPlan` no longer hides the cause: the toast now shows
+  "A geração do plano falhou: {real error}" instead of the generic message.
+- Settings model-list flow: the status line shows the real error message
+  (red, wrapped) instead of a boolean flag; if the API returns an empty
+  compatible list it falls back to the static list with a note.
+
 ## 2026-09-23 — IDE lint config + onboarding cleanup
 
 - Added `.vscode/settings.json` with `css.lint.unknownAtRules: "ignore"` —

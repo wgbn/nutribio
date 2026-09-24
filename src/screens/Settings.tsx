@@ -18,19 +18,27 @@ export function Settings({onClose}: {onClose: () => void}) {
   const [notice, setNotice] = useState<string | null>(null);
   const [models, setModels] = useState<ModelOption[] | null>(null);
   const [modelsLoading, setModelsLoading] = useState(false);
-  const [modelsError, setModelsError] = useState(false);
+  const [modelsErrorMsg, setModelsErrorMsg] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   /** Fetch the live model list from the Gemini API (lazy SDK import). */
   const loadModels = useCallback(async (key: string) => {
     setModelsLoading(true);
-    setModelsError(false);
+    setModelsErrorMsg(null);
     try {
       const {fetchAvailableModels} = await import('../lib/models');
       const list = await fetchAvailableModels(key);
-      setModels(list);
-    } catch {
-      setModelsError(true);
+      if (list.length === 0) {
+        // API succeeded but nothing passed the filter: fall back to the
+        // static list with a note instead of an empty dropdown.
+        setModels(null);
+        setModelsErrorMsg('A API não devolveu modelos compatíveis — a mostrar lista predefinida.');
+      } else {
+        setModels(list);
+      }
+    } catch (err) {
+      const {describeError} = await import('../lib/errors');
+      setModelsErrorMsg(describeError(err));
       setModels(null);
     } finally {
       setModelsLoading(false);
@@ -43,7 +51,7 @@ export function Settings({onClose}: {onClose: () => void}) {
     if (!key) {
       setModels(null);
       setModelsLoading(false);
-      setModelsError(false);
+      setModelsErrorMsg(null);
       return;
     }
     void loadModels(key);
@@ -150,11 +158,16 @@ export function Settings({onClose}: {onClose: () => void}) {
               onChange={(e) => saveSettings({model: e.target.value})}
             />
             <div className="mt-1.5 flex items-center justify-between gap-2">
-              <p className="text-xs text-slate-400">
+              <p
+                className={
+                  'text-xs ' +
+                  (modelsErrorMsg ? 'break-words text-rose-600' : 'text-slate-400')
+                }
+              >
                 {modelsLoading
                   ? 'A carregar modelos…'
-                  : modelsError
-                    ? 'Não foi possível carregar a lista — a mostrar lista predefinida.'
+                  : modelsErrorMsg
+                    ? modelsErrorMsg
                     : models
                       ? `${models.length} modelos disponíveis via API.`
                       : 'Lista predefinida (sem chave configurada).'}

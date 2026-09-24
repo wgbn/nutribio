@@ -210,6 +210,22 @@ screen-level logic.
 generation trigger automatically gets overlay + toast; do not reintroduce
 per-screen generation error UI.
 
+#20. 2026-09-24 — Gemini key collected at onboarding; real API errors surfaced
+**Context:** The onboarding never asked for the Gemini API key, so the first
+generation always failed; after adding the key in Settings, both the model
+list and generation failed with generic messages the user could not read on
+mobile (no console).
+**Decision:** The API key field was added to onboarding step 1 (optional,
+saved to `settings` before the generation dialog). All Gemini error paths now
+surface the real underlying message: `describeError()` (`src/lib/errors.ts`)
+extracts readable text from the SDK's `Error.message` / API JSON body
+(`{error:{code,status,message}}`), `generateWeeklyPlan` rethrows with the
+detail, and the Settings model-list status line shows the actual error (and
+falls back to the static list when the API returns nothing compatible).
+**Consequences:** On-device diagnosis of API problems without a console; the
+generic "Verifica a chave da API" message is gone from the error path. Do not
+revert to swallowing API errors.
+
 #18. 2026-09-23 — GitHub Pages deployment (project site, GitHub Actions)
 **Context:** The user wants the code hosted on their GitHub repo with GitHub
 Pages serving the built site at `https://<user>.github.io/nutribio/`.

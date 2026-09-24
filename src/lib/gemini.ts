@@ -14,6 +14,7 @@ import type {
   WeekDayId,
 } from '../types';
 import {GOAL_LABELS, mealLabel, SEX_LABELS} from './calculations';
+import {describeError} from './errors';
 import {parseTimeToMinutes, workoutMealIds} from './mealTimes';
 import {emptyMealSlot, SLOT_ORDER, WEEK_ORDER} from './plan';
 import {fmt, fmtGrams} from './units';
@@ -356,7 +357,7 @@ export async function generateWeeklyPlan(
   }
 
   if (lastError instanceof GeminiError) throw lastError;
-  throw new GeminiError(
-    'A geração do plano falhou. Verifica a chave da API e o modelo nas Definições e tenta novamente.',
-  );
+  // Surface the real API error (e.g. "401 UNAUTHENTICATED: API key not
+  // valid") instead of a generic message, so it can be diagnosed on mobile.
+  throw new GeminiError(`A geração do plano falhou: ${describeError(lastError)}`);
 }

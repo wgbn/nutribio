@@ -247,7 +247,14 @@ notes? }`. `normalizeWeek` accepts 3–4 variations defensively.
 
 ### Errors
 `GeminiError` for: missing key, empty response, unparseable JSON, empty plan,
-repeated failures. The store surfaces `generationError` to the UI.
+repeated failures. The store surfaces `generationError` to the UI. Real API
+errors are NOT swallowed: `describeError()` (`src/lib/errors.ts`) extracts a
+readable message from the SDK's errors (including the embedded API JSON body,
+e.g. "400 INVALID_ARGUMENT: API key not valid"), and `generateWeeklyPlan`
+rethrows `GeminiError('A geração do plano falhou: ' + detail)` so the global
+toast shows the cause. The Settings model-list status line shows the real
+error too, and falls back to the static list when the API returns nothing
+compatible (DECISIONS #20).
 
 ## 7. Live model listing (`src/lib/models.ts`)
 
@@ -289,7 +296,9 @@ Actions: `saveProfile` (bumps `updatedAt`), `saveBioRecord`,
 ### Onboarding (`screens/Onboarding.tsx`) — 3 steps
 1. **Dados básicos**: name, sex (chips), age/height/initial weight (number
    inputs), goal (chips), exercise toggle (frequency/intensity/type + workout
-   time `<input type="time">` when active). "Continuar" requires `basicValid`.
+   time `<input type="time">` when active), and the optional Gemini API key
+   field (password + show/hide; saved to `settings` on commit). "Continuar"
+   requires `basicValid`.
 2. **Dados da balança** (optional): 11 bioimpedance fields; "Saltar este
    passo (opcional)" or "Continuar".
 3. **Preferências da dieta**: two textareas (`excludedFoods`,
