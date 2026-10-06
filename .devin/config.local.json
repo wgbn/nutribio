@@ -5,7 +5,17 @@
       "Exec(npx esbuild)",
       "Exec(sleep)",
       "Exec(grep)",
-      "Exec(git checkout)"
+      "Exec(git checkout)",
+      "Exec(npm install)",
+      "Exec(npm ls)",
+      "Exec(python3)",
+      "Exec(head)",
+      "Exec(browser-harness)",
+      "Exec(tail)",
+      "Exec(sed)",
+      "Exec(rm)",
+      "Exec(git add)",
+      "Exec(git commit)"
     ]
   }
 }
