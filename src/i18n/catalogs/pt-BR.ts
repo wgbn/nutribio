@@ -283,11 +283,7 @@ const ptBR = {
     copyFailed: 'Não foi possível copiar a lista.',
     allBought: 'Tudo comprado — boa semana!',
     toggleBought: 'Marcar {{name}} como comprado',
-    empty: {
-      title: 'Ainda sem lista de compras',
-      body: 'Gere um novo plano para obter a lista de compras semanal.',
-      cta: 'Gerar plano semanal',
-    },
+    basicNote: 'Lista básica — itens sem agrupamento por seção. Gere um novo plano para uma lista estruturada.',
     noPlan: {
       title: 'Ainda sem plano',
       body: 'Gere seu plano semanal para obter a lista de compras.',

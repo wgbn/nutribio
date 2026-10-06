@@ -191,7 +191,7 @@ const PLAN_SCHEMA = {
       items: SHOPPING_ITEM_SCHEMA,
     },
   },
-  required: ['week'],
+  required: ['week', 'shoppingItems'],
 };
 
 interface RawDish {

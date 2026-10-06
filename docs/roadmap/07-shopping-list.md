@@ -107,3 +107,12 @@ to be used as a market list.
   old-plan-without-shopping. Verified: build + parity; browser test of the
   tab and empty state. Open: real generation check (pending user-confirmed
   regeneration), native review of es/fr/de/it.
+
+- 2026-10-06 — Bug fix (user report): generation from the Today screen could
+  produce a plan without the shopping catalog because `shoppingItems` was
+  optional in the Gemini schema. Fixed: schema now REQUIRES `shoppingItems`;
+  the Compras tab renders the degraded fallback list (with a `basicNote`
+  banner) instead of a misleading empty state; all plain "generate plan"
+  CTAs were unified into a shared `GeneratePlanButton` component (identical
+  action/busy state). No plan hash change (no regeneration needed for
+  existing plans).

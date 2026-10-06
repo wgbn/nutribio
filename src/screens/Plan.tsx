@@ -3,6 +3,7 @@
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
+import {GeneratePlanButton} from '../components/GeneratePlanButton';
 import {GearIcon, SparklesIcon} from '../components/icons';
 import {MacroBar} from '../components/MacroBar';
 import {MealCard} from '../components/MealCard';
@@ -21,15 +22,7 @@ function weekdayIndex(date: Date): number {
 }
 
 export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
-  const {
-    plan,
-    targets,
-    workoutMeals,
-    setSelectedVariation,
-    generatePlan,
-    isGenerating,
-    generationStage,
-  } = useStore();
+  const {plan, targets, workoutMeals, setSelectedVariation} = useStore();
   const {t} = useTranslation();
   const todayDow = WEEK_ORDER[weekdayIndex(new Date())];
   const [selectedDay, setSelectedDay] = useState<WeekDayId>(todayDow);
@@ -42,19 +35,11 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
         <div className="mt-16 rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm">
           <h2 className="text-lg font-semibold text-slate-800">{t('plan.empty.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">{t('plan.empty.body')}</p>
-          {isGenerating ? (
-            <p className="mt-4 text-sm font-medium text-emerald-600">
-              {generationStage ? t(generationStage) : t('generation.hint')}
-            </p>
-          ) : (
-            <button
-              onClick={() => void generatePlan()}
-              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
-            >
-              <SparklesIcon size={16} />
-              {t('plan.empty.cta')}
-            </button>
-          )}
+          <GeneratePlanButton
+            label={t('plan.empty.cta')}
+            icon={<SparklesIcon size={16} />}
+            className="mt-5 w-full py-3"
+          />
         </div>
       </div>
     );

@@ -282,11 +282,7 @@ const it = {
     copyFailed: 'Impossibile copiare la lista.',
     allBought: 'Tutto acquistato — buona settimana!',
     toggleBought: 'Segna {{name}} come acquistato',
-    empty: {
-      title: 'Ancora nessuna lista della spesa',
-      body: 'Genera un nuovo piano per ottenere la lista della spesa settimanale.',
-      cta: 'Genera piano settimanale',
-    },
+    basicNote: 'Lista base — articoli non raggruppati per reparto. Genera un nuovo piano per una lista strutturata.',
     noPlan: {
       title: 'Ancora nessun piano',
       body: 'Genera il tuo piano settimanale per ottenere la lista della spesa.',

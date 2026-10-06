@@ -281,11 +281,7 @@ const fr = {
     copyFailed: 'Impossible de copier la liste.',
     allBought: 'Tout est acheté — bonne semaine !',
     toggleBought: 'Marquer {{name}} comme acheté',
-    empty: {
-      title: 'Pas encore de liste de courses',
-      body: 'Générez un nouveau plan pour obtenir la liste de courses hebdomadaire.',
-      cta: 'Générer le plan hebdomadaire',
-    },
+    basicNote: 'Liste basique — articles non regroupés par rayon. Générez un nouveau plan pour une liste structurée.',
     noPlan: {
       title: 'Pas encore de plan',
       body: 'Générez votre plan hebdomadaire pour obtenir la liste de courses.',

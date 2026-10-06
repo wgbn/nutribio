@@ -282,11 +282,7 @@ const de = {
     copyFailed: 'Liste konnte nicht kopiert werden.',
     allBought: 'Alles gekauft — gute Woche!',
     toggleBought: '{{name}} als gekauft markieren',
-    empty: {
-      title: 'Noch keine Einkaufsliste',
-      body: 'Erstelle einen neuen Plan, um die Wocheneinkaufsliste zu erhalten.',
-      cta: 'Wochenplan erstellen',
-    },
+    basicNote: 'Grundliste — Artikel nicht nach Abteilung gruppiert. Erstelle einen neuen Plan für eine strukturierte Liste.',
     noPlan: {
       title: 'Noch kein Plan',
       body: 'Erstelle deinen Wochenplan, um die Einkaufsliste zu erhalten.',

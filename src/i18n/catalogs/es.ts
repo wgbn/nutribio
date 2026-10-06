@@ -282,11 +282,7 @@ const es = {
     copyFailed: 'No se pudo copiar la lista.',
     allBought: '¡Todo comprado — buena semana!',
     toggleBought: 'Marcar {{name}} como comprado',
-    empty: {
-      title: 'Aún sin lista de la compra',
-      body: 'Genera un nuevo plan para obtener la lista de la compra semanal.',
-      cta: 'Generar plan semanal',
-    },
+    basicNote: 'Lista básica — artículos sin agrupar por sección. Genera un nuevo plan para una lista estructurada.',
     noPlan: {
       title: 'Aún sin plan',
       body: 'Genera tu plan semanal para obtener la lista de la compra.',

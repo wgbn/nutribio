@@ -5,7 +5,8 @@
 import {useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
-import {CartIcon, CheckIcon, CopyIcon, GearIcon, ShareIcon, SparklesIcon} from '../components/icons';
+import {CartIcon, CheckIcon, CopyIcon, GearIcon, ShareIcon} from '../components/icons';
+import {GeneratePlanButton} from '../components/GeneratePlanButton';
 import {useStore} from '../hooks/useStore';
 import {MEAL_LABEL_KEYS, WEEKDAY_KEY} from '../lib/mealTimes';
 import {
@@ -29,7 +30,7 @@ const CATEGORY_KEYS: Record<ShoppingCategory, string> = {
 
 export function Shopping({onOpenSettings}: {onOpenSettings: () => void}) {
   const {t} = useTranslation();
-  const {plan, shoppingChecks, toggleShoppingItem, generatePlan, isGenerating} = useStore();
+  const {plan, shoppingChecks, toggleShoppingItem} = useStore();
   const [hideBought, setHideBought] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<string | null>(null);
@@ -116,43 +117,19 @@ export function Shopping({onOpenSettings}: {onOpenSettings: () => void}) {
           </div>
           <h2 className="text-lg font-semibold text-slate-800">{t('shopping.noPlan.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">{t('shopping.noPlan.body')}</p>
-          {isGenerating ? null : (
-            <button
-              onClick={() => void generatePlan()}
-              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
-            >
-              <SparklesIcon size={16} />
-              {t('shopping.noPlan.cta')}
-            </button>
-          )}
+          <GeneratePlanButton
+            label={t('shopping.noPlan.cta')}
+            icon={<CartIcon size={16} />}
+            className="mt-5 w-full py-3"
+          />
         </div>
       </div>
     );
   }
 
-  // Old cached plans (generated before the shopping catalog existed).
-  if (!plan.shoppingItems || plan.shoppingItems.length === 0) {
-    return (
-      <div className="mx-auto w-full max-w-md px-4 pb-28 pt-6 md:pb-12">
-        <div className="mt-16 rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-            <CartIcon size={28} />
-          </div>
-          <h2 className="text-lg font-semibold text-slate-800">{t('shopping.empty.title')}</h2>
-          <p className="mt-1 text-sm text-slate-500">{t('shopping.empty.body')}</p>
-          {isGenerating ? null : (
-            <button
-              onClick={() => void generatePlan()}
-              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
-            >
-              <SparklesIcon size={16} />
-              {t('shopping.empty.cta')}
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
+  // A plan without a shopping catalog (legacy plan or a generation that
+  // omitted it) still gets a usable basic list via the aggregation fallback.
+  const hasCatalog = !!plan.shoppingItems && plan.shoppingItems.length > 0;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 md:pb-12">
@@ -184,6 +161,14 @@ export function Shopping({onOpenSettings}: {onOpenSettings: () => void}) {
         <p className="font-semibold">{t('shopping.suggestion.title')}</p>
         <p className="mt-0.5">{t('shopping.suggestion.body')}</p>
       </div>
+
+      {/* Basic (uncatalogued) list note — legacy plans or a generation that
+          omitted the shopping catalog. */}
+      {!hasCatalog ? (
+        <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
+          {t('shopping.basicNote')}
+        </p>
+      ) : null}
 
       {/* Actions */}
       <div className="mt-3 flex flex-wrap items-center gap-2">

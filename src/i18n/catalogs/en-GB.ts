@@ -283,11 +283,7 @@ const enGB = {
     copyFailed: 'Could not copy the list.',
     allBought: 'Everything bought — enjoy your week!',
     toggleBought: 'Mark {{name}} as bought',
-    empty: {
-      title: 'No shopping list yet',
-      body: 'Generate a new plan to get the weekly shopping list.',
-      cta: 'Generate weekly plan',
-    },
+    basicNote: 'Basic list — items are not grouped by section. Generate a new plan for a structured list.',
     noPlan: {
       title: 'No plan yet',
       body: 'Generate your weekly plan to get the shopping list.',

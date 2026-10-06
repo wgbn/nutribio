@@ -1,10 +1,11 @@
 // "Today" screen: the meal of the moment with dish variations (swipe/arrows),
 // upcoming meals and daily macro progress.
 
-import {useRef, useState} from 'react';
+import {useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 
 import {DishSwitcher} from '../components/DishSwitcher';
+import {GeneratePlanButton} from '../components/GeneratePlanButton';
 import {GearIcon, RestaurantIcon, SparklesIcon} from '../components/icons';
 import {MacroBar} from '../components/MacroBar';
 import {MacroChips} from '../components/MealCard';
@@ -46,11 +47,8 @@ export function Today({
     workoutMeals,
     planIsCurrent,
     isGenerating,
-    generationStage,
-    generatePlan,
     setSelectedVariation,
   } = useStore();
-  const [generatingNow, setGeneratingNow] = useState(false);
   const touchX = useRef<number | null>(null);
 
   const greeting = (() => {
@@ -68,12 +66,6 @@ export function Today({
   const upcoming = nextMeals();
   const todayTotals = todayPlan ? dayTotals(todayPlan) : {kcal: 0, protein: 0, carbs: 0, fat: 0};
 
-  const handleGenerate = async () => {
-    setGeneratingNow(true);
-    await generatePlan();
-    setGeneratingNow(false);
-  };
-
   const dish = currentMeal ? getSelectedDish(currentMeal) : null;
 
   const onSwipeEnd = (deltaX: number) => {
@@ -87,7 +79,7 @@ export function Today({
     setSelectedVariation(today, currentMeal.id, next);
   };
 
-  const busy = generatingNow || isGenerating;
+  const busy = isGenerating;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 md:pb-12">
@@ -117,14 +109,12 @@ export function Today({
         <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           <p className="font-medium">{t('today.stale.title')}</p>
           <p className="mt-0.5 text-amber-700">{t('today.stale.body')}</p>
-          <button
-            onClick={handleGenerate}
-            className="mt-2.5 flex items-center gap-1.5 rounded-xl bg-amber-600 px-3.5 py-2 text-xs font-semibold text-white active:bg-amber-700"
-          >
-            <SparklesIcon size={14} />
-            {t('today.stale.cta')}
-          </button>
-        </div>
+          <GeneratePlanButton
+            label={t('today.stale.cta')}
+            variant="warning"
+            icon={<SparklesIcon size={14} />}
+            className="mt-2.5 text-xs"
+          />        </div>
       ) : null}
 
       {/* No plan */}
@@ -135,19 +125,11 @@ export function Today({
           </div>
           <h2 className="text-lg font-semibold text-slate-800">{t('today.empty.title')}</h2>
           <p className="mt-1 text-sm text-slate-500">{t('today.empty.body')}</p>
-          {busy ? (
-            <p className="mt-4 text-sm font-medium text-emerald-600">
-              {generationStage ? t(generationStage) : t('generation.hint')}
-            </p>
-          ) : (
-            <button
-              onClick={handleGenerate}
-              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
-            >
-              <SparklesIcon size={16} />
-              {t('today.empty.cta')}
-            </button>
-          )}
+          <GeneratePlanButton
+            label={t('today.empty.cta')}
+            icon={<SparklesIcon size={16} />}
+            className="mt-5 w-full py-3"
+          />
         </div>
       ) : (
         <div className="md:grid md:grid-cols-2 md:items-start md:gap-4 xl:grid-cols-3">

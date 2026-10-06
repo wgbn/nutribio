@@ -6,6 +6,33 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-10-06 — Fix: shopping list missing after regenerating from any screen
+
+Reported by the user: generating a new plan from the Today screen produced no
+shopping list (only the button inside the Compras tab seemed to work).
+
+- **Root cause**: `PLAN_SCHEMA.required` was only `['week']`, so `shoppingItems`
+  was optional and Gemini could return a plan without the catalog — while the
+  Compras tab hid the list entirely (`empty` state) instead of falling back.
+  All generation buttons already called the SAME store action
+  (`useStore().generatePlan()`); there were no two different actions.
+- **Fix 1**: `shoppingItems` is now **required** in the Gemini JSON schema —
+  structured output must include the catalog on every generation, from any
+  screen.
+- **Fix 2**: the Compras tab no longer shows a misleading "generate a new
+  plan" empty state when the catalog is missing/empty: it renders the
+  degraded list (ingredients fall back to an "other" group in
+  `buildShoppingList`) with an informational banner (`shopping.basicNote`,
+  replaced the unused `shopping.empty.*` keys in all 7 catalogs).
+- **Fix 3**: unified all plain "generate plan" CTAs into a shared
+  `GeneratePlanButton` component (Today stale banner + empty state, Plan
+  empty state, Shopping no-plan state) — identical action, busy state and
+  disabled handling; removed Today's redundant local `generatingNow` state.
+  Onboarding/EditData keep their confirm-dialog flow (same action).
+- Verified: `npm run build` + `i18n:check`; browser test — Compras tab now
+  renders the aggregated list (40 items, grouped by section) instead of an
+  empty state; Today/Plan/Shopping use the shared CTA.
+
 ## 2026-10-06 — Weekly shopping list ("Compras" tab, roadmap item 7)
 
 - **Gemini schema/prompt**: the plan response now includes a top-level
