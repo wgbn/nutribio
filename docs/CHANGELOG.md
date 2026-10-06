@@ -6,6 +6,80 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-10-06 — Multi-language support + country-aware cuisine (roadmap items 1 & 6)
+
+The app now supports 7 locales and asks for the user's country, which steers
+the Gemini prompt to country-typical ingredients. UI language follows the
+app locale; cuisine follows the country (e.g. a Brazilian in Portugal gets a
+pt-BR interface with Portuguese supermarket products).
+
+- **i18n infrastructure** (`src/i18n/`): `locales.ts` (locale list,
+  `resolveLocale` with pt-*→pt-PT / pt-BR→pt-BR / en-*→en-GB rules and en-GB
+  fallback, active-locale tracking), `index.ts` (i18next runtime; en-GB
+  statically imported as the guaranteed fallback, other catalogs lazy-loaded
+  per locale — each is its own ~10 kB chunk, out of the main bundle).
+  `Settings.locale: 'auto' | Locale` (normalized for old settings; kept on
+  reset). Language selector in Definições switches immediately (re-init of
+  i18next with the newly loaded catalog — i18next v26 has no post-init
+  resource registration). `<html lang>` set dynamically. `npm run
+  i18n:check` (scripts/check_i18n.mjs) enforces key parity + interpolation
+  placeholders across all 7 catalogs and is chained into `npm run build`.
+- **Catalogs** (252 keys each): en-GB (source), pt-PT (previous copy), pt-BR
+  (real adaptation: você-form, "Café da manhã", "Configurações", "tela de
+  início"…), es/fr/de/it (agent translations, pending native review).
+- **String extraction**: all screens/components/domain labels are now i18n
+  keys (`GOAL_LABEL_KEYS` etc. in `calculations.ts`, `MEAL_LABEL_KEYS`,
+  `WEEKDAY_KEY`, badge kind `'pre'|'post'` in `mealTimes.ts`). `units.ts`
+  formats with the active locale; `NumberInput` displays the locale's decimal
+  separator while still accepting comma and dot. Generator errors and
+  generation stages are i18n keys (`errors.*`, `generation.stage.*`).
+- **Gemini prompt rewritten in English** (instructions + JSON-schema
+  descriptions) with a mandatory **output-language block** (all
+  human-readable content in the user's locale) and a **country-of-residence
+  block** (`COUNTRY_CUISINE_HINTS` per country, replacing the PT-specific food
+  rules). `Plan.locale` stored on generated plans; the locale is part of the
+  plan inputs hash → changing the language marks the plan stale
+  (regeneration stays user-confirmed, DECISIONS #6/#25).
+- **Country (roadmap item 6)**: `Profile.country` (curated list
+  `BR, PT, ES, FR, DE, IT, NL, BE, IE, AT, LU, GB` in `src/lib/countries.ts`),
+  required in onboarding step 1 and editable in Dados; old profiles are
+  normalized (preselected from device region/locale). Names via
+  `Intl.DisplayNames`, sorted per active locale. Country drives cuisine
+  (now) and later Stripe currency + legal regime (items 3/5).
+- **Minimization (roadmap item 5.1, first code change)**: the profile **name
+  is no longer sent to the Gemini prompt** (not needed to build a plan).
+- Verified: `npm run build` (+ i18n parity check) passes; browser test —
+  device pt-PT auto-detection, live switch pt→en→de→fr→auto without reload,
+  saved preference survives reload, country select (12 options) in Dados,
+  chunk layout (7 lazy catalog chunks + SDK out of main bundle).
+- Note: existing cached plans become stale by design (new hash inputs:
+  locale + country) — the "data changed" banner appears once and the user
+  confirms a regeneration.
+
+## 2026-10-06 — Improvement roadmap: tracking system + decision entries (#21–#30)
+
+- Created `docs/roadmap/` — the tracking system for the 2026-10 improvements
+  (approved plan): `README.md` (status table, execution waves, blocking
+  non-code dependencies) plus one file per item with goal, research
+  findings, decisions, open questions, phase checklists, verification and
+  a progress log:
+  `01-i18n`, `02-welcome`, `03-payments`, `04-backend-storage`,
+  `05-legal-consent`, `06-country-cuisine`, `07-shopping-list`.
+- `docs/DECISIONS.md`: appended #21–#30 recording the approved direction —
+  backend era (monorepo + Nuxt API + Supabase EU; supersedes #1/#3/#13),
+  freemium model (1 free generation, monthly subscription), auth (Google +
+  email/password + OTP, 18+), i18n (7 locales, react-i18next, custom
+  resolver; supersedes #15), profile country (cuisine/currency/legal
+  regime), weekly shopping list (LLM canonicalization + local sum),
+  offline cache model (`nutribio.v2` sync marker), consent framework
+  (explicit health-data consent, no analytics, Gemini paid tier) and
+  payments research (one Stripe PT account for EUR + BRL; Stripe Managed
+  Payments preferred; accountant/lawyer reviews are blocking steps).
+- `AGENTS.md` + `.devin/global_rules.md`: the mandatory workflows now
+  include reading/updating the roadmap; hard constraints carry a note that
+  they describe the shipped app and are superseded per roadmap phase.
+- No application code changed in this entry.
+
 ## 2026-09-24 — Gemini key in onboarding + real API errors surfaced
 
 - Onboarding step 1 ("Dados básicos") now includes the "Chave da API Gemini"

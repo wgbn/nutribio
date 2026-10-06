@@ -241,3 +241,172 @@ deploys on push to `main` via `actions/deploy-pages` (Pages source must be
 repo is renamed, update `BASE_PATH` in the workflow. No client-side router
 means no `404.html` fallback is needed. The Gemini key security model is
 unchanged (never in the bundle or repo — see #3).
+
+> Note (2026-10-06): this log has two `#18` entries (workout time and GitHub
+> Pages deployment). They are left as-is because other docs reference `#18`
+> as the workout decision. New entries continue from **#21**.
+
+---
+
+#21. 2026-10-06 — Improvement roadmap with per-item tracking (docs/roadmap/)
+**Context:** The owner wants full control over the 2026-10 improvements: what
+is done, what is missing, and which decisions were taken.
+**Decision:** `docs/roadmap/` holds `README.md` (status table, execution
+order, blocking non-code dependencies) plus one file per item (goal, research,
+decisions, open questions, phase checklists, progress log). Workflow: read
+the item file before working; after progress, tick checklist, append to the
+progress log, update the README status. Formal decisions are still appended
+to this log; every change still gets a CHANGELOG entry.
+**Consequences:** A task is only "done" when the roadmap file reflects it.
+Do not work on a phase without checking its item file first.
+
+#22. 2026-10-06 — Backend era: monorepo + Nuxt API + Supabase EU (supersedes #1, #3, #13)
+**Context:** The owner approved adding accounts, a database and payments —
+explicitly reversing the "100% frontend" principle, and wants a separate
+Nuxt (Nitro) API project (not Supabase/Firebase Edge Functions), debated in
+detail before implementation.
+**Decision:** Convert the repo to a monorepo: `apps/web` (current Vite PWA,
+still on GitHub Pages), `apps/api` (Nuxt server routes), `packages/core`
+(shared pure logic). Supabase (EU region) provides Postgres + Auth (Google,
+email/password, 6-digit email OTP for signup confirmation and recovery).
+The Nuxt API verifies the Supabase JWT and owns all data access (RLS on,
+no client policies). The Gemini key becomes a server-side env secret and
+generation runs as a background job (queue via plans table, claimed with
+`FOR UPDATE SKIP LOCKED`) so the user can close the app. Targets are
+computed server-side. localStorage becomes a cache (`nutribio.v2`, per
+user, with a `planId`/`updatedAt` sync marker) for fast/offline reads.
+**Status:** Accepted — effective from phases 4.1–4.9 (roadmap
+`04-backend-storage.md`). Until then, the app remains local-only and the
+key stays in Settings (#3 still in force for the shipped app).
+**Consequences:** The web app loses the key field, model dropdown and
+`@google/genai` dependency in 4.6. Regeneration stays user-confirmed
+(#6 preserved, now server-enforced). Long-running Node hosting is required
+for the API.
+
+#23. 2026-10-06 — Freemium: one free generation, then monthly subscription only
+**Context:** The owner defined the business model and rejected an annual
+plan.
+**Decision:** Every user gets exactly one free plan generation (ever);
+further generations require an active monthly subscription. Entitlement
+checked atomically in the generation endpoint. Failed jobs do not consume
+the free generation (pending final confirmation).
+**Consequences:** Paywall UI after the free generation; fair-use limit for
+subscribers still to be defined; abuse mitigation (verified email before
+the free generation) to be enforced server-side.
+
+#24. 2026-10-06 — Login methods and minimum age
+**Context:** The owner specified the auth UX.
+**Decision:** Google OAuth + email/password (signup confirmation and
+password recovery via 6-digit email OTP, `verifyOtp`). Minimum age 18+
+(self-declaration at signup) to avoid parental-consent flows for health
+data under GDPR/LGPD.
+**Consequences:** Supabase Auth email templates must be localized (7
+languages); the signup flow includes the consent gate (see #29).
+
+#25. 2026-10-06 — i18n: 7 locales, react-i18next, custom resolver (supersedes #15)
+**Context:** The owner wants pt-BR, pt-PT and the most common European
+languages, with device-language detection and English as fallback.
+**Decision:** Locales: `pt-PT`, `pt-BR`, `en-GB` (fallback), `es`, `fr`,
+`de`, `it`. Library: `i18next` + `react-i18next`, catalogs lazy-loaded per
+locale, typed keys, `en-GB` as source. Custom `resolveLocale`:
+`pt-BR`→pt-BR; any other `pt-*`→pt-PT; `en-*`→en-GB; `es/fr/de/it-*` match;
+otherwise `en-GB`. Override in `settings.locale` (`'auto' | Locale`). Locale
+enters the plan `inputsHash` (language change → stale plan → user-confirmed
+regeneration). UI language follows locale; **cuisine follows country**
+(see #26). Domain labels become translation keys.
+**Consequences:** pt-BR is a real adaptation, not a copy; es/fr/de/it are
+agent-translated pending native review; `npm run i18n:check` enforces key
+parity. Generator errors become codes translated in the UI.
+
+#26. 2026-10-06 — Profile country drives cuisine (and currency/legal regime)
+**Context:** The owner wants plan ingredients to match the country the user
+lives in, so shopping is easy.
+**Decision:** `Profile.country` (ISO alpha-2, required) collected in
+onboarding step 1, editable in Dados, carried through every profile write.
+Curated list (not all 27): `BR, PT, ES, FR, DE, IT, NL, BE, IE, AT, LU, GB`
+(final list owned by the user; single constant `SUPPORTED_COUNTRIES`). Names
+via `Intl.DisplayNames` in the active locale; preselected from device region
+or locale. The Gemini prompt prioritizes country-typical ingredients/dishes
+with per-country hints. `country` is part of the profile → part of the
+inputs hash → changing it marks the plan stale.
+**Consequences:** Stripe currency derives from country (BR→BRL, GB→GBP
+option, else EUR — see #30); legal regime derives from country (LGPD/UK
+GDPR/GDPR — see #29).
+
+#27. 2026-10-06 — Weekly shopping list: all variations, suggestion, LLM canonicalization + local sum
+**Context:** The owner wants a "Compras da semana" tab with every plan.
+**Decision:** The list covers all variations and is explicitly labelled a
+**suggestion** (buy according to the dishes you choose to make; each item
+shows which dishes use it). In the same Gemini request, each ingredient
+gains `shoppingKey` + `rawGrams` (raw/purchase weight) and the response
+includes canonical `shoppingItems` (key, name, category, unit/package
+grams, country-typical). The app aggregates locally (deterministic sum,
+practical units). Tab features: mark as bought, group by supermarket
+section, copy/share (Web Share API), practical units.
+**Consequences:** Response grows ~20–30% (token budget check needed);
+`normalizeWeek` validates defensively; missing keys fall into "other". Old
+cached plans show an empty state until regenerated.
+
+#28. 2026-10-06 — Offline model: DB is source of truth, localStorage is a cache
+**Context:** The owner wants offline reads of the plan with fast local usage,
+but data stored server-side.
+**Decision:** After Item 4, the DB is the source of truth. localStorage
+(namespace `nutribio.v2`, per user, cleared on logout) caches plan,
+profile, biometrics and shopping checks with a sync marker
+(`planId` + `planUpdatedAt`): render cache instantly, fetch metadata,
+refetch only when the server version differs. Variation selections and
+shopping checks are optimistic with a small write-through retry queue;
+other writes require network.
+**Consequences:** The `nutribio.v1` export/import is replaced by server
+export (GDPR, #29). Cache reset on new plan generation.
+
+#29. 2026-10-06 — Consent & privacy framework (RGPD/LGPD/UK GDPR)
+**Context:** The app collects bioimpedance and diet data — special-category
+data under GDPR art. 9 / LGPD art. 11 — and sells to EU, BR and GB users.
+**Decision:** Minimization: stop sending the name to Gemini; age only; no
+birth date. Three separate unticked consents at signup: (a) Terms +
+Privacy; (b) explicit health-data consent; (c) 18+. Consents stored with
+document version, locale and timestamp; version bumps require re-consent.
+No analytics → no cookie banner (adding analytics later requires a banner).
+Gemini API **paid tier is mandatory** before go-live (free tier allows
+training/human review). Data-subject rights in Settings: export, delete
+account, withdraw consent. Texts (en-GB source + 6 translations) are
+engineering baselines pending **lawyer review**.
+**Consequences:** The lawyer review and the public controller contact are
+blocking dependencies for the server go-live. RoPA + DPIA-lite live in
+`docs/legal/`.
+
+#30. 2026-10-06 — Payments: one Stripe PT account (EUR + BRL); Managed Payments preferred
+**Context:** The owner has no company and asked whether one Stripe account
+can charge EUR and BRL, and who handles fiscal invoices.
+**Decision:** One Stripe account (Portugal) presents charges in EUR and BRL
+(cards + Pix incl. recurring), settling in EUR. Freemium per #23. Preferred
+route: **Stripe Managed Payments** (merchant of record — Stripe/Link sells
+to the end customer, handles VAT in 80+ countries incl. all EU + GB,
+customer invoices, fraud/disputes/support; +3.5% per transaction; Checkout/
+Payment Links only; eligibility review required; product tax code e.g.
+`txcd_10105001`). Manual `currency_options` prices for EUR/BRL (/GBP?).
+Brazil is NOT in Managed Payments' tax coverage → accountant must confirm
+the BR tax treatment; **Paddle** (MoR, Pix + Pix Automático) is the
+fallback/comparison. Income must still be declared in Portugal (typically
+sole trader / "atividade aberta" — no company needed); accountant consult
+is blocking.
+**Consequences:** No certified invoicing software (InvoiceXpress/Moloni)
+needed if MoR is confirmed; consumer withdrawal rights (EU 14-day / BR
+7-day) must appear in Terms + checkout. Currency derived from
+`profile.country` (#26). Gemini paid tier before go-live (see #29).
+
+#31. 2026-10-06 — i18next v26 resource registration pattern (lazy catalogs + re-init)
+**Context:** i18next v26 (installed 2026-10-06) removed the
+`addResourceBundle`/`hasResourceBundle` instance API; catalogs can only be
+registered via `init({resources})`.
+**Decision:** en-GB is statically imported (guaranteed fallback bundle); the
+other six catalogs are lazy chunks tracked in a module-local
+`loadedCatalogs` map. `initI18n` runs once at startup with the target locale
++ fallback; `changeLocale` loads the new catalog then re-runs
+`i18next.use(initReactI18next).init({resources: <all loaded>})` on the same
+instance, followed by `changeLanguage`. Verified working on v26 (no
+re-init error; React bindings re-applied).
+**Consequences:** Keep the module-local `loadedCatalogs` map as the source
+of truth for what is registered (do not query the i18next resource store).
+If i18next is upgraded to a major version, re-verify this pattern.

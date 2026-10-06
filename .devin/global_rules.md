@@ -10,6 +10,9 @@ Before making ANY change (new feature, bug fix, refactor, configuration):
 3. Read the relevant sections of `docs/ARCHITECTURE.md` — understand the data
    model, storage schema, calculations, Gemini flow and screen structure
    before touching code.
+4. Read `docs/roadmap/README.md` — improvement roadmap status — plus the
+   item file for the phase you are working on (never work a phase without
+   its checklist).
 
 ## Mandatory: document EVERY implementation or modification
 
@@ -21,10 +24,19 @@ After ANY change (feature, bug fix, refactor, config, dependency, doc change):
    changed (keep it the source of truth for how the app works).
 3. Append a new dated entry to `docs/DECISIONS.md` for EVERY new technical
    decision (do not silently overwrite existing entries).
+4. Update the roadmap: tick the phase checklist in the item file, append a
+   line to its Progress log, and refresh the status in
+   `docs/roadmap/README.md`.
 
 A task is not complete until its documentation is written.
 
 ## Hard constraints (never violate)
+
+> The constraints below describe the app **as shipped today**. Decisions
+> #21–#30 (2026-10-06, `docs/DECISIONS.md` + `docs/roadmap/`) approved the
+> backend/payment era — those decisions take effect per roadmap phase, and
+> the text below is updated when each phase lands. Do not implement a
+> superseding change ahead of its roadmap phase.
 
 - No backend, no database, no sync — all data stays in `localStorage`
   (namespace `nutribio.v1`), single-device by design.
@@ -40,4 +52,5 @@ A task is not complete until its documentation is written.
 - Mobile-first does NOT mean mobile-only: layouts must adapt — bottom tab bar
   + stacked on mobile; left sidebar + multi-column grids on desktop (`md+`).
 - UI copy in Portuguese (PT-PT); code, identifiers, comments and docs in
-  English.
+  English. (Superseded by DECISIONS #25 from roadmap phase 1.1 onward: UI is
+  localized to 7 locales; code/docs stay in English.)
