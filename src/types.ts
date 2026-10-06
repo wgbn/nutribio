@@ -78,10 +78,39 @@ export interface Ingredient {
   item: string;
   amountGrams: number;
   unit?: string;
+  /** Reference into the plan's `shoppingItems` (canonical purchasable item). */
+  shoppingKey?: string;
+  /** Raw/purchase-weight equivalent of `amountGrams` (cooked→raw). */
+  rawGrams?: number;
   kcal?: number;
   protein?: number;
   carbs?: number;
   fat?: number;
+}
+
+/** Supermarket sections used to group the weekly shopping list. */
+export type ShoppingCategory =
+  | 'produce'
+  | 'meat_fish'
+  | 'dairy_eggs'
+  | 'bakery_grains'
+  | 'pantry'
+  | 'frozen'
+  | 'drinks'
+  | 'other';
+
+/** Canonical purchasable item of the weekly shopping list. */
+export interface ShoppingItem {
+  key: string;
+  /** Display name in the plan's output language, country-typical. */
+  name: string;
+  category: ShoppingCategory;
+  /** Typical weight of one practical unit, e.g. one egg (~60 g). */
+  unitWeightGrams?: number;
+  /** Typical package weight, e.g. 500 g for chicken breast. */
+  packageGrams?: number;
+  /** Optional package label shown in the list, e.g. "pack of 2". */
+  packageLabel?: string;
 }
 
 export interface Macros {
@@ -150,6 +179,8 @@ export interface Plan {
   targets: NutritionTargets;
   week: DayPlan[];
   overview?: string;
+  /** Canonical shopping items referenced by the ingredients' `shoppingKey`. */
+  shoppingItems?: ShoppingItem[];
 }
 
 export interface Settings {
@@ -159,4 +190,4 @@ export interface Settings {
   locale: LocaleSetting;
 }
 
-export type TabId = 'today' | 'plan' | 'progress' | 'data';
+export type TabId = 'today' | 'plan' | 'shopping' | 'progress' | 'data';

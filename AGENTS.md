@@ -78,10 +78,11 @@ The most critical ones:
 | `src/lib/models.ts` | Live Gemini model listing for the Settings dropdown |
 | `src/lib/storage.ts` | localStorage keys, defaults, bio record merge/remove, export/import |
 | `src/lib/plan.ts` | Plan assembly + query helpers (selected dish, day/week totals) |
+| `src/lib/shopping.ts` | Shopping list aggregation + quantity labels (Compras tab) |
 | `src/lib/mealTimes.ts` | 5 meal slots + time windows, next-meal helpers |
 | `src/lib/hash.ts` | FNV-1a inputs hash (plan cache invalidation; includes locale) |
 | `src/hooks/useStore.tsx` | Global state + persistence + plan generation action |
-| `src/screens/*` | Onboarding (3-step wizard), Today, Plan, Progress, EditData (Dados), Settings |
+| `src/screens/*` | Onboarding (3-step wizard), Today, Plan, Shopping (Compras), Progress, EditData (Dados), Settings |
 | `src/components/*` | TabBar/Sidebar, forms (Field/NumberInput/TextArea), dialogs, charts, meal cards |
 
 ## Documentation

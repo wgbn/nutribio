@@ -1,6 +1,6 @@
 # 07 — Weekly shopping list ("Compras" tab)
 
-**Status:** ☐ Not started
+**Status:** ☑ Done (2026-10-06)
 
 ## Goal
 
@@ -63,28 +63,29 @@ to be used as a market list.
 ## Phases
 
 ### 7.1 Types + schema + prompt
-- [ ] `ShoppingItem` type; `Ingredient.shoppingKey` + `rawGrams`;
+- [x] `ShoppingItem` type; `Ingredient.shoppingKey` + `rawGrams`;
       `Plan.shoppingItems`.
-- [ ] Gemini schema (`shoppingItems` array + ingredient fields) + prompt
+- [x] Gemini schema (`shoppingItems` array + ingredient fields) + prompt
       rules (canonical purchasable items, country-typical, raw weights).
-- [ ] `normalizeWeek`/normalizer updates (defensive; "other" fallback).
+- [x] `normalizeWeek`/normalizer updates (defensive; "other" fallback).
 
 ### 7.2 Aggregation
-- [ ] `src/lib/shopping.ts`: sum + practical units + dish references.
-- [ ] Unit tests (esbuild scratch or vitest).
+- [x] `src/lib/shopping.ts`: sum + practical units + dish references.
+- [x] Unit tests (esbuild scratch or vitest).
 
 ### 7.3 UI
-- [ ] `src/screens/Shopping.tsx` + tab wiring (TabBar/Sidebar/icons).
-- [ ] Suggestion disclaimer + expandable "used in" per item.
-- [ ] Bought-check persistence (local, by `planId + key`).
-- [ ] Copy/share (grouped plain text).
-- [ ] Translations in the 7 catalogs.
+- [x] `src/screens/Shopping.tsx` + tab wiring (TabBar/Sidebar/icons).
+- [x] Suggestion disclaimer + expandable "used in" per item.
+- [x] Bought-check persistence (local, by plan hash + key).
+- [x] Copy/share (grouped plain text).
+- [x] Translations in the 7 catalogs.
 
 ### 7.4 Verify + docs
 - [ ] Real generation check (owner's key): shopping keys/raw grams present,
-      token size OK, output language correct.
-- [ ] Docs: ARCHITECTURE (§4 types, §6 prompt/schema, §9 new tab),
-      DECISIONS, CHANGELOG.
+      token size OK, output language correct. (Pending the next user-confirmed
+      generation — the plan is stale by design after the hash change.)
+- [x] Docs: ARCHITECTURE (§4 types, §6 prompt/schema, §9 new tab),
+      DECISIONS (#27 already recorded), CHANGELOG.
 
 ## Verification
 
@@ -96,3 +97,13 @@ to be used as a market list.
 ## Progress log
 
 - 2026-10-06 — Item created from the approved roadmap plan.
+
+- 2026-10-06 — Implemented: schema + prompt rules 12–13 (canonical
+  shoppingItems + shoppingKey/rawGrams), `normalizeShoppingItems`,
+  `lib/shopping.ts` aggregation with practical units (unit-tested via
+  esbuild scratch), "Compras" tab (grouped by section, bought checkboxes
+  persisted per plan hash, hide-bought, expandable "used in", copy/share),
+  26 new i18n keys in the 7 catalogs, empty states for no-plan and
+  old-plan-without-shopping. Verified: build + parity; browser test of the
+  tab and empty state. Open: real generation check (pending user-confirmed
+  regeneration), native review of es/fr/de/it.

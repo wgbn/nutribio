@@ -72,6 +72,7 @@ nutribio/
     │   ├── gemini.ts            # prompt builder (English) + generateWeeklyPlan + normalizeWeek
     │   ├── models.ts            # live model listing (ai.models.list)
     │   ├── plan.ts              # assemblePlan, SLOT_ORDER/WEEK_ORDER, totals
+    │   ├── shopping.ts          # shopping list aggregation + quantity labels
     │   ├── mealTimes.ts         # 5 meal slots, time windows, next-meal helpers (label KEYS)
     │   ├── hash.ts              # FNV-1a
     │   └── units.ts             # locale-aware number/date formatting
@@ -92,6 +93,7 @@ nutribio/
         ├── Onboarding.tsx       # 3-step wizard
         ├── Today.tsx            # "Hoje" — meal of the moment
         ├── Plan.tsx             # weekly view
+        ├── Shopping.tsx         # "Compras" — weekly shopping list
         ├── Progress.tsx         # charts + history
         ├── EditData.tsx         # "Dados" — all forms + calc summary
         └── Settings.tsx         # "Definições" overlay
@@ -263,12 +265,28 @@ carbs) → "Return ONLY the JSON in the given schema."
   same derivation. Changing the time invalidates the plan hash (DECISIONS #18).
 
 ### JSON schema (`PLAN_SCHEMA`)
-Top level `{ overview?: string, week: DayPlan[] }`; each day `{ day, meals }`;
-each meal `{ slot, variations: 3× Dish }`; dish `{ name, description?,
-ingredients[{item, amountGrams, unit?}], macros{kcal,protein,carbs,fat},
-notes? }`. `normalizeWeek` accepts 3–4 variations defensively. All schema
-descriptions are in English and instruct the model to write content in the
-required output language.
+Top level `{ overview?: string, week: DayPlan[], shoppingItems?: ShoppingItem[] }`;
+each day `{ day, meals }`; each meal `{ slot, variations: 3× Dish }`; dish
+`{ name, description?, ingredients[{item, amountGrams, shoppingKey?,
+rawGrams?, unit?}], macros{kcal,protein,carbs,fat}, notes? }`; shopping item
+`{ key, name, category, unitWeightGrams?, packageGrams?, packageLabel? }`
+(categories: `produce | meat_fish | dairy_eggs | bakery_grains | pantry |
+frozen | drinks | other`). `normalizeWeek` accepts 3–4 variations
+defensively; `normalizeShoppingItems` dedupes by key and falls back to
+`other` for unknown categories. All schema descriptions are in English and
+instruct the model to write content in the required output language.
+
+### Shopping list (`src/lib/shopping.ts`, DECISIONS #27)
+`buildShoppingList(week, shoppingItems)` sums `rawGrams` (fallback
+`amountGrams`) per canonical item across ALL dish variations — the list is a
+**suggestion** (the UI shows which dishes use each item and the disclaimer
+tells the user to buy only what they will cook). Rows are sorted by
+category (SHOPPING_CATEGORY_ORDER) then name, with practical quantity labels
+(`quantityLabel`: packages via `packageGrams`, count via `unitWeightGrams`,
+else grams/kg) and dish references (day · meal · dish · grams). Ingredients
+without a valid `shoppingKey` fall into an "other" pseudo-item keyed by raw
+name. The store keeps `shoppingChecks` (bought item keys) persisted per plan
+hash (`nutribio.v1.shoppingChecks`) — reset when a new plan is generated.
 
 ### Errors
 `GeminiError` for: missing key, empty response, unparseable JSON, empty plan,
@@ -329,10 +347,12 @@ effects. Derived: `targets` (recomputed from profile + latest weight),
 
 Actions: `saveProfile` (bumps `updatedAt`), `saveBioRecord`,
 `removeBioRecord`, `saveSettings`, `setSelectedVariation(day, slot, index)`,
-`generatePlan()` (async; returns boolean; lazy-loads the SDK; stores the plan
-with its locale), `dismissGenerationError`, `resetAll` (clears localStorage
-but **keeps the language preference** — a device setting, not personal data).
-The inputs hash includes the **active locale** (language change → stale plan).
+`toggleShoppingItem(key)` (bought marks for the shopping list, persisted per
+plan hash), `generatePlan()` (async; returns boolean; lazy-loads the SDK;
+stores the plan with its locale and shopping catalog), `dismissGenerationError`,
+`resetAll` (clears localStorage but **keeps the language preference** — a
+device setting, not personal data). The inputs hash includes the **active
+locale** (language change → stale plan).
 
 ## 9. Screens & flows
 
@@ -382,6 +402,17 @@ The inputs hash includes the **active locale** (language change → stale plan).
   via `setSelectedVariation`).
 - "Outros dias" quick-preview list (2–3 columns on desktop).
 - No plan → empty state with generate CTA.
+
+### Shopping (`screens/Shopping.tsx`)
+- Weekly shopping list aggregated from the plan (item 7, DECISIONS #27).
+- Suggestion disclaimer (covers all variations; buy only what you'll cook).
+- Grouped by supermarket section (8 categories, translated), per-item
+  "bought" checkbox + "hide bought" toggle, expandable "used in" list
+  (day · meal · dish · grams), Copy (plain text) and Share (Web Share API
+  with copy fallback).
+- Empty states: no plan → generate CTA; plan without `shoppingItems` (old
+  cached plan) → prompt to regenerate (still confirm-gated, DECISIONS #6).
+- Desktop: multi-column grid; mobile: stacked.
 
 ### Progress (`screens/Progress.tsx`)
 - Metric chips: Peso, Gordura corporal, IMC, Músculo, Água, Proteína.

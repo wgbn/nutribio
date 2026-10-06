@@ -4,13 +4,14 @@
 import {useTranslation} from 'react-i18next';
 
 import type {TabId} from '../types';
-import {CalendarIcon, ChartIcon, ClockIcon, UserIcon, type IconProps} from './icons';
+import {CalendarIcon, CartIcon, ChartIcon, ClockIcon, UserIcon, type IconProps} from './icons';
 
 export type TabDef = {id: TabId; labelKey: string; Icon: (p: IconProps) => React.JSX.Element};
 
 export const TABS: TabDef[] = [
   {id: 'today', labelKey: 'nav.today', Icon: ClockIcon},
   {id: 'plan', labelKey: 'nav.plan', Icon: CalendarIcon},
+  {id: 'shopping', labelKey: 'nav.shopping', Icon: CartIcon},
   {id: 'progress', labelKey: 'nav.progress', Icon: ChartIcon},
   {id: 'data', labelKey: 'nav.data', Icon: UserIcon},
 ];

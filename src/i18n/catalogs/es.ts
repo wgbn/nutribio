@@ -22,6 +22,7 @@ const es = {
     plan: 'Plan',
     progress: 'Progreso',
     data: 'Datos',
+    shopping: 'Compra',
   },
   greeting: {
     early: 'Buenas madrugadas',
@@ -265,6 +266,42 @@ const es = {
       'Restricciones o indicaciones a considerar en la dieta (ej.: no superar 20 g de grasa saturada al día).',
     observationsPlaceholder:
       'ej.: no superar 20 g de grasa saturada al día; potenciar la proteína en las comidas…',
+  },
+  shopping: {
+    title: 'Lista de la compra semanal',
+    subtitle: '{{count}} artículos · todas las variaciones',
+    suggestion: {
+      title: 'Lista sugerida',
+      body: 'Incluye todas las variaciones de la semana. Compra solo lo que vayas a cocinar: cada artículo muestra los platos que lo usan.',
+    },
+    hideBought: 'Ocultar comprados',
+    boughtCount: '{{count}} de {{total}} comprados',
+    copy: 'Copiar',
+    share: 'Compartir',
+    copied: 'Lista de la compra copiada.',
+    copyFailed: 'No se pudo copiar la lista.',
+    allBought: '¡Todo comprado — buena semana!',
+    toggleBought: 'Marcar {{name}} como comprado',
+    empty: {
+      title: 'Aún sin lista de la compra',
+      body: 'Genera un nuevo plan para obtener la lista de la compra semanal.',
+      cta: 'Generar plan semanal',
+    },
+    noPlan: {
+      title: 'Aún sin plan',
+      body: 'Genera tu plan semanal para obtener la lista de la compra.',
+      cta: 'Generar plan semanal',
+    },
+    category: {
+      produce: 'Fruta y verdura',
+      meat_fish: 'Carnicería y pescadería',
+      dairy_eggs: 'Lácteos y huevos',
+      bakery_grains: 'Panadería y cereales',
+      pantry: 'Despensa',
+      frozen: 'Congelados',
+      drinks: 'Bebidas',
+      other: 'Otros',
+    },
   },
   settings: {
     title: 'Ajustes',

@@ -22,6 +22,7 @@ const de = {
     plan: 'Plan',
     progress: 'Verlauf',
     data: 'Daten',
+    shopping: 'Einkauf',
   },
   greeting: {
     early: 'Guten späten Abend',
@@ -265,6 +266,42 @@ const de = {
       'Einschränkungen oder Hinweise, die zu berücksichtigen sind (z. B. nicht mehr als 20 g gesättigte Fettsäuren pro Tag).',
     observationsPlaceholder:
       'z. B. nicht mehr als 20 g gesättigte Fettsäuren pro Tag; Protein bei den Mahlzeiten erhöhen…',
+  },
+  shopping: {
+    title: 'Wocheneinkaufsliste',
+    subtitle: '{{count}} Artikel · alle Variationen',
+    suggestion: {
+      title: 'Vorschlagsliste',
+      body: 'Sie enthält alle Variationen der Woche. Kaufe nur, was du kochen willst — jeder Artikel zeigt die Gerichte, die ihn verwenden.',
+    },
+    hideBought: 'Gekaufte ausblenden',
+    boughtCount: '{{count}} von {{total}} gekauft',
+    copy: 'Kopieren',
+    share: 'Teilen',
+    copied: 'Einkaufsliste kopiert.',
+    copyFailed: 'Liste konnte nicht kopiert werden.',
+    allBought: 'Alles gekauft — gute Woche!',
+    toggleBought: '{{name}} als gekauft markieren',
+    empty: {
+      title: 'Noch keine Einkaufsliste',
+      body: 'Erstelle einen neuen Plan, um die Wocheneinkaufsliste zu erhalten.',
+      cta: 'Wochenplan erstellen',
+    },
+    noPlan: {
+      title: 'Noch kein Plan',
+      body: 'Erstelle deinen Wochenplan, um die Einkaufsliste zu erhalten.',
+      cta: 'Wochenplan erstellen',
+    },
+    category: {
+      produce: 'Obst & Gemüse',
+      meat_fish: 'Fleisch & Fisch',
+      dairy_eggs: 'Milchprodukte & Eier',
+      bakery_grains: 'Brot & Getreide',
+      pantry: 'Vorrat',
+      frozen: 'Tiefkühl',
+      drinks: 'Getränke',
+      other: 'Sonstiges',
+    },
   },
   settings: {
     title: 'Einstellungen',

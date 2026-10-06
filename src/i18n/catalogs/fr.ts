@@ -22,6 +22,7 @@ const fr = {
     plan: "Plan",
     progress: "Progrès",
     data: "Données",
+    shopping: 'Courses',
   },
   greeting: {
     early: "Bon début de journée",
@@ -264,6 +265,42 @@ const fr = {
       "Contraintes ou indications à prendre en compte (ex. : ne pas dépasser 20 g de graisses saturées par jour).",
     observationsPlaceholder:
       "ex. : ne pas dépasser 20 g de graisses saturées par jour ; privilégier les protéines aux repas…",
+  },
+  shopping: {
+    title: 'Liste de courses de la semaine',
+    subtitle: '{{count}} articles · toutes les variantes',
+    suggestion: {
+      title: 'Liste suggérée',
+      body: 'Elle inclut toutes les variantes de la semaine. N’achetez que ce que vous allez cuisiner — chaque article montre les plats qui l’utilisent.',
+    },
+    hideBought: 'Masquer les achetés',
+    boughtCount: '{{count}} sur {{total}} achetés',
+    copy: 'Copier',
+    share: 'Partager',
+    copied: 'Liste de courses copiée.',
+    copyFailed: 'Impossible de copier la liste.',
+    allBought: 'Tout est acheté — bonne semaine !',
+    toggleBought: 'Marquer {{name}} comme acheté',
+    empty: {
+      title: 'Pas encore de liste de courses',
+      body: 'Générez un nouveau plan pour obtenir la liste de courses hebdomadaire.',
+      cta: 'Générer le plan hebdomadaire',
+    },
+    noPlan: {
+      title: 'Pas encore de plan',
+      body: 'Générez votre plan hebdomadaire pour obtenir la liste de courses.',
+      cta: 'Générer le plan hebdomadaire',
+    },
+    category: {
+      produce: 'Fruits et légumes',
+      meat_fish: 'Boucherie et poissonnerie',
+      dairy_eggs: 'Produits laitiers et œufs',
+      bakery_grains: 'Boulangerie et céréales',
+      pantry: 'Épicerie',
+      frozen: 'Surgelés',
+      drinks: 'Boissons',
+      other: 'Autres',
+    },
   },
   settings: {
     title: "Réglages",

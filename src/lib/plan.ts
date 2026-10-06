@@ -10,6 +10,7 @@ import type {
   NutritionTargets,
   Plan,
   Profile,
+  ShoppingItem,
   WeekDayId,
 } from '../types';
 import {MEAL_SLOTS, mealLabel, timeWindowLabel} from './mealTimes';
@@ -74,6 +75,7 @@ export function assemblePlan(
   inputsHash: string,
   overview?: string,
   locale = 'pt-PT',
+  shoppingItems?: ShoppingItem[],
 ): Plan {
   return {
     generatedAt: Date.now(),
@@ -84,5 +86,6 @@ export function assemblePlan(
     targets,
     week,
     overview,
+    shoppingItems,
   };
 }

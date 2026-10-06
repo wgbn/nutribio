@@ -22,6 +22,7 @@ const it = {
     plan: 'Piano',
     progress: 'Progressi',
     data: 'Dati',
+    shopping: 'Spesa',
   },
   greeting: {
     early: 'Buonanotte ai nottambuli',
@@ -265,6 +266,42 @@ const it = {
       'Vincoli o indicazioni da considerare nella dieta (es. non superare 20 g di grassi saturi al giorno).',
     observationsPlaceholder:
       'es. non superare 20 g di grassi saturi al giorno; potenziare le proteine nei pasti…',
+  },
+  shopping: {
+    title: 'Lista della spesa settimanale',
+    subtitle: '{{count}} articoli · tutte le varianti',
+    suggestion: {
+      title: 'Lista suggerita',
+      body: 'Include tutte le varianti della settimana. Compra solo ciò che cucinerai — ogni articolo mostra i piatti che lo usano.',
+    },
+    hideBought: 'Nascondi acquistati',
+    boughtCount: '{{count}} di {{total}} acquistati',
+    copy: 'Copia',
+    share: 'Condividi',
+    copied: 'Lista della spesa copiata.',
+    copyFailed: 'Impossibile copiare la lista.',
+    allBought: 'Tutto acquistato — buona settimana!',
+    toggleBought: 'Segna {{name}} come acquistato',
+    empty: {
+      title: 'Ancora nessuna lista della spesa',
+      body: 'Genera un nuovo piano per ottenere la lista della spesa settimanale.',
+      cta: 'Genera piano settimanale',
+    },
+    noPlan: {
+      title: 'Ancora nessun piano',
+      body: 'Genera il tuo piano settimanale per ottenere la lista della spesa.',
+      cta: 'Genera piano settimanale',
+    },
+    category: {
+      produce: 'Frutta e verdura',
+      meat_fish: 'Macelleria e pescheria',
+      dairy_eggs: 'Latticini e uova',
+      bakery_grains: 'Pane e cereali',
+      pantry: 'Dispensa',
+      frozen: 'Surgelati',
+      drinks: 'Bevande',
+      other: 'Altro',
+    },
   },
   settings: {
     title: 'Impostazioni',

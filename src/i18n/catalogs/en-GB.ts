@@ -23,6 +23,7 @@ const enGB = {
     plan: 'Plan',
     progress: 'Progress',
     data: 'Data',
+    shopping: 'Shopping',
   },
   greeting: {
     early: 'Hello',
@@ -266,6 +267,42 @@ const enGB = {
       'Constraints or instructions to consider in the diet (e.g. do not exceed 20 g of saturated fat per day).',
     observationsPlaceholder:
       'e.g. do not exceed 20 g of saturated fat per day; boost protein at meals…',
+  },
+  shopping: {
+    title: 'Weekly shopping list',
+    subtitle: '{{count}} items · all meal variations',
+    suggestion: {
+      title: 'Suggested list',
+      body: 'It includes all variations of the week. Buy only what you plan to cook — each item shows the dishes that use it.',
+    },
+    hideBought: 'Hide bought',
+    boughtCount: '{{count}} of {{total}} bought',
+    copy: 'Copy',
+    share: 'Share',
+    copied: 'Shopping list copied.',
+    copyFailed: 'Could not copy the list.',
+    allBought: 'Everything bought — enjoy your week!',
+    toggleBought: 'Mark {{name}} as bought',
+    empty: {
+      title: 'No shopping list yet',
+      body: 'Generate a new plan to get the weekly shopping list.',
+      cta: 'Generate weekly plan',
+    },
+    noPlan: {
+      title: 'No plan yet',
+      body: 'Generate your weekly plan to get the shopping list.',
+      cta: 'Generate weekly plan',
+    },
+    category: {
+      produce: 'Fruit & vegetables',
+      meat_fish: 'Meat & fish',
+      dairy_eggs: 'Dairy & eggs',
+      bakery_grains: 'Bakery & grains',
+      pantry: 'Pantry',
+      frozen: 'Frozen',
+      drinks: 'Drinks',
+      other: 'Other',
+    },
   },
   settings: {
     title: 'Settings',

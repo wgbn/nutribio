@@ -18,6 +18,8 @@ import type {
   MealSlot,
   NutritionTargets,
   Profile,
+  ShoppingCategory,
+  ShoppingItem,
   WeekDayId,
 } from '../types';
 import {activeLocale, LOCALE_LANGUAGE_NAMES} from '../i18n/locales';
@@ -55,6 +57,54 @@ export const COUNTRY_CUISINE_HINTS: Record<CountryCode, string> = {
   GB: "Typical British products: chicken, turkey, salmon, cod, haddock, eggs, cottage cheese, Greek-style yoghurt (0%), wholemeal bread, oats, potatoes, rice, olive oil, vegetables, apples, berries, lean mince.",
 };
 
+export const SHOPPING_CATEGORIES: ShoppingCategory[] = [
+  'produce',
+  'meat_fish',
+  'dairy_eggs',
+  'bakery_grains',
+  'pantry',
+  'frozen',
+  'drinks',
+  'other',
+];
+
+const SHOPPING_ITEM_SCHEMA = {
+  type: 'object',
+  properties: {
+    key: {
+      type: 'string',
+      description:
+        'Stable lowercase slug identifying this purchasable product, e.g. "chicken_breast", "brown_rice", "olive_oil". Reuse the SAME key whenever the same product appears',
+    },
+    name: {
+      type: 'string',
+      description:
+        'Product name a shopper would find in the country\'s supermarkets, in the required output language, e.g. "Peito de frango"',
+    },
+    category: {
+      type: 'string',
+      enum: [...SHOPPING_CATEGORIES],
+      description:
+        'Supermarket section: produce, meat_fish, dairy_eggs, bakery_grains, pantry, frozen, drinks or other',
+    },
+    unitWeightGrams: {
+      type: 'number',
+      description:
+        'Typical weight of one practical unit if applicable, e.g. 60 for an egg, 120 for a potato (omit if not applicable)',
+    },
+    packageGrams: {
+      type: 'number',
+      description:
+        'Typical package weight if the product is usually sold in packages, e.g. 500 for chicken breast (omit for loose produce)',
+    },
+    packageLabel: {
+      type: 'string',
+      description: 'Short package description in the required output language, e.g. "pack of 2" (omit if not useful)',
+    },
+  },
+  required: ['key', 'name', 'category'],
+};
+
 const DISH_SCHEMA = {
   type: 'object',
   properties: {
@@ -71,6 +121,16 @@ const DISH_SCHEMA = {
               'Ingredient name, in the required output language, typical of the user country (e.g. "grilled chicken breast")',
           },
           amountGrams: {type: 'number', description: 'Precise quantity in grams'},
+          shoppingKey: {
+            type: 'string',
+            description:
+              'Key of the matching entry in the top-level shoppingItems catalog — the same key for the same product',
+          },
+          rawGrams: {
+            type: 'number',
+            description:
+              'Raw/purchase-weight equivalent of amountGrams when the recipe weight is cooked (e.g. 150 g cooked rice ~ 50 g raw); equal to amountGrams when the weight is already raw',
+          },
           unit: {
             type: 'string',
             description: 'Additional practical unit if helpful, e.g. "1 unit", "1 tbsp"',
@@ -124,6 +184,12 @@ const PLAN_SCHEMA = {
   properties: {
     overview: {type: 'string', description: '2-3 sentence summary of the weekly plan, in the required output language'},
     week: {type: 'array', items: DAY_SCHEMA},
+    shoppingItems: {
+      type: 'array',
+      description:
+        'Canonical shopping catalog for the whole week: ONE entry per purchasable product, referenced by the ingredients\' shoppingKey fields. Include every product used across all dishes and variations',
+      items: SHOPPING_ITEM_SCHEMA,
+    },
   },
   required: ['week'],
 };
@@ -147,11 +213,20 @@ function normalizeDish(raw: unknown): Dish | null {
   const ingredients: Ingredient[] = [];
   for (const ing of d.ingredients) {
     if (!ing || typeof ing !== 'object') continue;
-    const i = ing as {item?: unknown; amountGrams?: unknown; unit?: unknown};
+    const i = ing as {
+      item?: unknown;
+      amountGrams?: unknown;
+      unit?: unknown;
+      shoppingKey?: unknown;
+      rawGrams?: unknown;
+    };
     if (typeof i.item !== 'string' || !isNumber(i.amountGrams) || i.amountGrams <= 0) continue;
     ingredients.push({
       item: i.item,
       amountGrams: Math.round(i.amountGrams * 10) / 10,
+      shoppingKey: typeof i.shoppingKey === 'string' && i.shoppingKey ? i.shoppingKey : undefined,
+      rawGrams:
+        isNumber(i.rawGrams) && i.rawGrams > 0 ? Math.round(i.rawGrams * 10) / 10 : undefined,
       unit: typeof i.unit === 'string' ? i.unit : undefined,
     });
   }
@@ -169,6 +244,43 @@ function normalizeDish(raw: unknown): Dish | null {
       : undefined,
     notes: typeof d.notes === 'string' ? d.notes : undefined,
   };
+}
+
+/** Normalize the top-level shoppingItems catalog (defensive, deduped). */
+export function normalizeShoppingItems(raw: unknown): ShoppingItem[] {
+  if (!Array.isArray(raw)) return [];
+  const byKey = new Map<string, ShoppingItem>();
+  for (const entry of raw) {
+    if (!entry || typeof entry !== 'object') continue;
+    const e = entry as {key?: unknown; name?: unknown; category?: unknown};
+    if (typeof e.key !== 'string' || !e.key.trim()) continue;
+    const key = e.key.trim().toLowerCase().replace(/\s+/g, '_');
+    const name = typeof e.name === 'string' && e.name.trim() ? e.name.trim() : key;
+    const category = SHOPPING_CATEGORIES.includes(e.category as ShoppingCategory)
+      ? (e.category as ShoppingCategory)
+      : 'other';
+    const full = e as {
+      unitWeightGrams?: unknown;
+      packageGrams?: unknown;
+      packageLabel?: unknown;
+    };
+    byKey.set(key, {
+      key,
+      name,
+      category,
+      unitWeightGrams:
+        isNumber(full.unitWeightGrams) && full.unitWeightGrams > 0
+          ? Math.round(full.unitWeightGrams)
+          : undefined,
+      packageGrams:
+        isNumber(full.packageGrams) && full.packageGrams > 0 ? Math.round(full.packageGrams) : undefined,
+      packageLabel:
+        typeof full.packageLabel === 'string' && full.packageLabel.trim()
+          ? full.packageLabel.trim()
+          : undefined,
+    });
+  }
+  return [...byKey.values()];
 }
 
 export function normalizeWeek(raw: unknown): DayPlan[] {
@@ -320,7 +432,7 @@ ${bioLines.join('\n')}
 ${splitLines}
 ${workoutSection}${preferencesSection}
 ## Output language (MANDATORY)
-Write ALL human-readable content — the overview, dish names, descriptions, ingredient names, units and notes — in ${languageName} (${locale}). Food and product names must be the ones a shopper finds in ${countryLabel}, written in ${languageName}.
+Write ALL human-readable content — the overview, dish names, descriptions, ingredient names, units, notes, shopping item names and package labels — in ${languageName} (${locale}). Food and product names must be the ones a shopper finds in ${countryLabel}, written in ${languageName}.
 
 ## Mandatory rules
 1. 7 days: monday, tuesday, wednesday, thursday, friday, saturday, sunday (day enum).
@@ -334,6 +446,8 @@ Write ALL human-readable content — the overview, dish names, descriptions, ing
 9. The sum of the selected daily macros should approach the daily totals.
 10. Short dish names; notes with preparation tips or substitutions, in ${languageName}.
 11. Strictly respect the excluded foods and the observations listed in "User restrictions and preferences" — no dish may contain an excluded food, and the observations must be reflected in the plan.
+12. Shopping catalog: emit ONE entry in shoppingItems per purchasable product used across ALL dishes and ALL their variations (e.g. "chicken_breast", not "grilled chicken breast" and "shredded chicken" as separate entries). Names must be what the shopper finds in ${countryLabel} supermarkets. Provide packageGrams/packageLabel for packaged products (meat, fish, dairy, grains) and unitWeightGrams for count-based produce (eggs, fruit). Categories: produce, meat_fish, dairy_eggs, bakery_grains, pantry, frozen, drinks, other.
+13. Every ingredient's shoppingKey MUST reference an existing shoppingItems entry, and rawGrams MUST be the raw/purchase-weight equivalent when the recipe amount is cooked (e.g. 150 g cooked rice ≈ 50 g raw rice; 100 g cooked chicken breast ≈ 130 g raw). When the amount is already raw, rawGrams equals amountGrams.
 
 Return ONLY the JSON in the given schema.`;
 }
@@ -377,10 +491,10 @@ export interface GenerateOptions {
 export const STAGE_GENERATING = 'generation.stage.generating';
 export const STAGE_RETRYING = 'generation.stage.retrying';
 
-/** Generate the weekly plan via Gemini. Returns the normalized week + overview. */
+/** Generate the weekly plan via Gemini. Returns the normalized week + shopping catalog. */
 export async function generateWeeklyPlan(
   options: GenerateOptions,
-): Promise<{week: DayPlan[]; overview: string; locale: string}> {
+): Promise<{week: DayPlan[]; overview: string; locale: string; shoppingItems: ShoppingItem[]}> {
   if (!options.apiKey.trim()) {
     throw new GeminiError(i18next.t('errors.missingKey'));
   }
@@ -412,7 +526,10 @@ export async function generateWeeklyPlan(
         raw && typeof raw === 'object' && typeof (raw as {overview?: unknown}).overview === 'string'
           ? (raw as {overview: string}).overview
           : '';
-      return {week, overview, locale: activeLocale()};
+      const shoppingItems = normalizeShoppingItems(
+        raw && typeof raw === 'object' ? (raw as {shoppingItems?: unknown}).shoppingItems : undefined,
+      );
+      return {week, overview, locale: activeLocale(), shoppingItems};
     } catch (err) {
       lastError = err;
     }

@@ -31,7 +31,7 @@ log — roadmap decisions are also recorded there),
 | 4 | Backend & storage (Nuxt API + Supabase) | [04-backend-storage.md](04-backend-storage.md) | ☐ |
 | 5 | Terms, privacy & consent (RGPD/LGPD/UK GDPR) | [05-legal-consent.md](05-legal-consent.md) | ◐ (2026-10-06 — first minimization change done: name removed from the prompt) |
 | 6 | Country-aware cuisine (onboarding + prompt) | [06-country-cuisine.md](06-country-cuisine.md) | ☑ (2026-10-06) |
-| 7 | Weekly shopping list ("Compras" tab) | [07-shopping-list.md](07-shopping-list.md) | ☐ |
+| 7 | Weekly shopping list ("Compras" tab) | [07-shopping-list.md](07-shopping-list.md) | ☑ (2026-10-06) |
 
 ## Execution order (waves)
 

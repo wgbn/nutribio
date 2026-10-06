@@ -156,3 +156,27 @@ export const ActivityIcon = (p: IconProps) => (
     <path d="M22 12h-4l-3 8-6-16-3 8H2" />
   </svg>
 );
+
+export const CartIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="9" cy="20" r="1.6" />
+    <circle cx="17" cy="20" r="1.6" />
+    <path d="M2 3h3l2.6 12.2a1.5 1.5 0 0 0 1.5 1.2h7.9a1.5 1.5 0 0 0 1.5-1.2L20.5 8H6" />
+  </svg>
+);
+
+export const CopyIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+  </svg>
+);
+
+export const ShareIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="18" cy="5" r="2.5" />
+    <circle cx="6" cy="12" r="2.5" />
+    <circle cx="18" cy="19" r="2.5" />
+    <path d="M8.2 10.8l7.6-4.6M8.2 13.2l7.6 4.6" />
+  </svg>
+);

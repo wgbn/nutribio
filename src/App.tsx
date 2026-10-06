@@ -12,6 +12,7 @@ import {Onboarding} from './screens/Onboarding';
 import {Plan} from './screens/Plan';
 import {Progress} from './screens/Progress';
 import {Settings} from './screens/Settings';
+import {Shopping} from './screens/Shopping';
 import {Today} from './screens/Today';
 import type {TabId} from './types';
 
@@ -50,6 +51,7 @@ function Shell() {
       <Sidebar active={tab} onChange={setTab} onOpenSettings={openSettings} />
       {tab === 'today' ? <Today onNavigate={setTab} onOpenSettings={openSettings} /> : null}
       {tab === 'plan' ? <Plan onOpenSettings={openSettings} /> : null}
+      {tab === 'shopping' ? <Shopping onOpenSettings={openSettings} /> : null}
       {tab === 'progress' ? (
         <Progress
           onAddMeasurement={() => {

@@ -14,6 +14,7 @@ const KEYS = {
   biometrics: `${NAMESPACE}.biometrics`,
   plan: `${NAMESPACE}.plan`,
   settings: `${NAMESPACE}.settings`,
+  shoppingChecks: `${NAMESPACE}.shoppingChecks`,
 } as const;
 
 function read<T>(key: string, fallback: T): T {
@@ -83,6 +84,17 @@ export const loadSettings = (): Settings => {
 export const saveSettings = (settings: Settings) => write(KEYS.settings, settings);
 
 export const DEFAULT_MODEL = 'gemini-2.5-flash';
+
+/** Bought shopping items, keyed by the plan hash they belong to. */
+export interface ShoppingChecks {
+  planHash: string;
+  bought: string[];
+}
+
+export const loadShoppingChecks = (): ShoppingChecks =>
+  read<ShoppingChecks>(KEYS.shoppingChecks, {planHash: '', bought: []});
+
+export const saveShoppingChecks = (checks: ShoppingChecks) => write(KEYS.shoppingChecks, checks);
 
 export const MODEL_OPTIONS = [
   'gemini-2.5-flash',

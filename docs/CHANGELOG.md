@@ -6,6 +6,40 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-10-06 — Weekly shopping list ("Compras" tab, roadmap item 7)
+
+- **Gemini schema/prompt**: the plan response now includes a top-level
+  `shoppingItems` catalog (canonical purchasable items: `key`, `name`,
+  `category` among 8 supermarket sections, optional `unitWeightGrams` /
+  `packageGrams` / `packageLabel`) and each dish ingredient gains
+  `shoppingKey` (reference into the catalog) + `rawGrams` (raw/purchase
+  weight equivalent of cooked amounts). Prompt rules 12–13 enforce
+  canonicalization, country-typical product names and raw-weight
+  conversion; schema descriptions are in English with output in the user's
+  language (rules are part of the English prompt from item 1.4).
+- **Normalization**: `normalizeShoppingItems` (defensive: dedupe by key,
+  unknown categories → `other`) and ingredient fields carried through
+  `normalizeDish`; `generateWeeklyPlan` returns `shoppingItems`.
+- **Aggregation** (`src/lib/shopping.ts`, deterministic, unit-tested):
+  `buildShoppingList` sums `rawGrams` (fallback `amountGrams`) per canonical
+  item across ALL variations, sorts by category then name, computes
+  practical quantity labels ("≈ 2 × 500 g", "≈ 6", "≈ 1,1 kg", "≈ 120 g")
+  and keeps the list of dishes (day · meal · dish · grams) using each item.
+  Ingredients without a `shoppingKey` fall into an "other" group (graceful).
+- **UI**: new "Compras" tab (5th tab in TabBar/Sidebar, new `CartIcon`),
+  grouped by supermarket section (translated labels), suggestion disclaimer
+  ("includes all variations — buy only what you'll cook"), per-item bought
+  checkbox (persisted per plan hash under `nutribio.v1.shoppingChecks`,
+  reset when a new plan is generated), "hide bought" toggle, expandable
+  "used in" dish list, Copy (plain text grouped list) and Share (Web Share
+  API with copy fallback). Old cached plans without shopping data show an
+  empty state prompting a (user-confirmed) regeneration.
+- New i18n keys in all 7 catalogs (`nav.shopping`, `shopping.*`, 26 keys;
+  parity check stays green).
+- Verified: `npm run build` + `i18n:check`; aggregation unit tests
+  (duplicate keys summed, rawGrams used, package/unit/grams labels, "other"
+  fallback); browser test of the new tab and empty state.
+
 ## 2026-10-06 — Multi-language support + country-aware cuisine (roadmap items 1 & 6)
 
 The app now supports 7 locales and asks for the user's country, which steers

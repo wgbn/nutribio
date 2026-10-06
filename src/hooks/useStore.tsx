@@ -24,12 +24,15 @@ import {
   loadPlan,
   loadProfile,
   loadSettings,
+  loadShoppingChecks,
   mergeBioRecord,
   removeBioRecord,
   saveBiometrics,
   savePlan,
   saveProfile,
   saveSettings,
+  saveShoppingChecks,
+  type ShoppingChecks,
 } from '../lib/storage';
 
 interface StoreValue {
@@ -41,6 +44,8 @@ interface StoreValue {
   workoutMeals: WorkoutMeals | null;
   inputsHash: string;
   planIsCurrent: boolean;
+  /** Bought shopping items for the CURRENT plan (by inputsHash). */
+  shoppingChecks: string[];
   isGenerating: boolean;
   generationStage: string | null;
   generationError: string | null;
@@ -49,6 +54,7 @@ interface StoreValue {
   removeBioRecord: (date: string) => void;
   saveSettings: (patch: Partial<Settings>) => void;
   setSelectedVariation: (day: WeekDayId, slot: MealSlotId, index: number) => void;
+  toggleShoppingItem: (key: string) => void;
   generatePlan: () => Promise<boolean>;
   dismissGenerationError: () => void;
   resetAll: () => void;
@@ -68,6 +74,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
   const [biometrics, setBiometrics] = useState<BiometricsState>(() => loadBiometrics());
   const [plan, setPlan] = useState<Plan | null>(() => loadPlan());
   const [settings, setSettings] = useState<Settings>(() => loadSettings());
+  const [shoppingChecks, setShoppingChecks] = useState<ShoppingChecks>(() => loadShoppingChecks());
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStage, setGenerationStage] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -87,6 +94,10 @@ export function StoreProvider({children}: {children: ReactNode}) {
   useEffect(() => {
     saveSettings(settings);
   }, [settings]);
+
+  useEffect(() => {
+    saveShoppingChecks(shoppingChecks);
+  }, [shoppingChecks]);
 
   const inputsHash = useMemo(
     () => currentInputsHash(profile, biometrics),
@@ -147,6 +158,15 @@ export function StoreProvider({children}: {children: ReactNode}) {
     [],
   );
 
+  const handleToggleShoppingItem = useCallback((key: string) => {
+    setShoppingChecks((prev) => {
+      const bought = prev.bought.includes(key)
+        ? prev.bought.filter((k) => k !== key)
+        : [...prev.bought, key];
+      return {...prev, bought};
+    });
+  }, []);
+
   const handleGeneratePlan = useCallback(async (): Promise<boolean> => {
     if (!profile || !targets) return false;
     setIsGenerating(true);
@@ -156,7 +176,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
       const hash = currentInputsHash(profile, biometrics);
       // Lazy-load the Gemini SDK so the app shell stays small.
       const mod = await import('../lib/gemini');
-      const {week, overview, locale} = await mod.generateWeeklyPlan({
+      const {week, overview, locale, shoppingItems} = await mod.generateWeeklyPlan({
         apiKey: settings.geminiApiKey,
         model: settings.model,
         profile,
@@ -165,7 +185,11 @@ export function StoreProvider({children}: {children: ReactNode}) {
         weightKg,
         onProgress: setGenerationStage,
       });
-      setPlan(assemblePlan(profile, biometrics.latest, targets, week, hash, overview, locale));
+      setPlan(
+        assemblePlan(profile, biometrics.latest, targets, week, hash, overview, locale, shoppingItems),
+      );
+      // The new plan has a new hash: previous "bought" marks don't apply.
+      setShoppingChecks({planHash: hash, bought: []});
       setGenerationStage(null);
       return true;
     } catch (err) {
@@ -186,6 +210,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
     setProfile(null);
     setBiometrics({latest: null, history: []});
     setPlan(null);
+    setShoppingChecks({planHash: '', bought: []});
     // The language preference is a device setting — keep it on reset.
     setSettings({geminiApiKey: '', model: settings.model, locale: settings.locale});
   }, [settings.model, settings.locale]);
@@ -200,6 +225,9 @@ export function StoreProvider({children}: {children: ReactNode}) {
       workoutMeals,
       inputsHash,
       planIsCurrent,
+      // "Bought" marks only apply to the plan they were recorded for.
+      shoppingChecks:
+        plan && shoppingChecks.planHash === inputsHash ? shoppingChecks.bought : [],
       isGenerating,
       generationStage,
       generationError,
@@ -208,6 +236,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
       removeBioRecord: handleRemoveBioRecord,
       saveSettings: handleSaveSettings,
       setSelectedVariation: handleSetSelectedVariation,
+      toggleShoppingItem: handleToggleShoppingItem,
       generatePlan: handleGeneratePlan,
       dismissGenerationError: () => setGenerationError(null),
       resetAll: handleResetAll,
@@ -221,6 +250,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
       workoutMeals,
       inputsHash,
       planIsCurrent,
+      shoppingChecks,
       isGenerating,
       generationStage,
       generationError,
@@ -229,6 +259,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
       handleRemoveBioRecord,
       handleSaveSettings,
       handleSetSelectedVariation,
+      handleToggleShoppingItem,
       handleGeneratePlan,
       handleResetAll,
     ],

@@ -23,6 +23,7 @@ const ptBR = {
     plan: 'Plano',
     progress: 'Progresso',
     data: 'Dados',
+    shopping: 'Compras',
   },
   greeting: {
     early: 'Boa madrugada',
@@ -266,6 +267,42 @@ const ptBR = {
       'Restrições ou indicações a considerar na dieta (ex.: não ultrapassar 20 g de gordura saturada por dia).',
     observationsPlaceholder:
       'ex.: não ultrapassar 20 g de gordura saturada por dia; priorizar a proteína nas refeições…',
+  },
+  shopping: {
+    title: 'Compras da semana',
+    subtitle: '{{count}} itens · todas as variações',
+    suggestion: {
+      title: 'Lista sugerida',
+      body: 'Inclui todas as variações da semana. Compre apenas o que for cozinhar — cada item mostra os pratos que o usam.',
+    },
+    hideBought: 'Ocultar comprados',
+    boughtCount: '{{count}} de {{total}} comprados',
+    copy: 'Copiar',
+    share: 'Compartilhar',
+    copied: 'Lista de compras copiada.',
+    copyFailed: 'Não foi possível copiar a lista.',
+    allBought: 'Tudo comprado — boa semana!',
+    toggleBought: 'Marcar {{name}} como comprado',
+    empty: {
+      title: 'Ainda sem lista de compras',
+      body: 'Gere um novo plano para obter a lista de compras semanal.',
+      cta: 'Gerar plano semanal',
+    },
+    noPlan: {
+      title: 'Ainda sem plano',
+      body: 'Gere seu plano semanal para obter a lista de compras.',
+      cta: 'Gerar plano semanal',
+    },
+    category: {
+      produce: 'Frutas e verduras',
+      meat_fish: 'Açougue e peixaria',
+      dairy_eggs: 'Laticínios e ovos',
+      bakery_grains: 'Padaria e grãos',
+      pantry: 'Mercearia',
+      frozen: 'Congelados',
+      drinks: 'Bebidas',
+      other: 'Outros',
+    },
   },
   settings: {
     title: 'Configurações',
