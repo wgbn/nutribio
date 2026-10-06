@@ -1,13 +1,14 @@
 // "Plan" screen: full week view with per-day meal cards and variation pickers.
 
 import {useState} from 'react';
+import {useTranslation} from 'react-i18next';
 
 import {GearIcon, SparklesIcon} from '../components/icons';
 import {MacroBar} from '../components/MacroBar';
 import {MealCard} from '../components/MealCard';
 import {useStore} from '../hooks/useStore';
 import {fmtDateTime} from '../lib/units';
-import {WEEKDAY_LABELS, WEEK_ORDER, workoutBadgeFor} from '../lib/mealTimes';
+import {WEEKDAY_KEY, WEEK_ORDER, workoutBadgeFor} from '../lib/mealTimes';
 import {dayTotals, getSelectedDish} from '../lib/plan';
 import type {WeekDayId} from '../types';
 
@@ -29,6 +30,7 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
     isGenerating,
     generationStage,
   } = useStore();
+  const {t} = useTranslation();
   const todayDow = WEEK_ORDER[weekdayIndex(new Date())];
   const [selectedDay, setSelectedDay] = useState<WeekDayId>(todayDow);
 
@@ -38,13 +40,11 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
     return (
       <div className="mx-auto w-full max-w-md px-4 pb-28 pt-6 md:pb-12">
         <div className="mt-16 rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm">
-          <h2 className="text-lg font-semibold text-slate-800">Sem plano gerado</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Gera o teu plano semanal para veres as refeições de todos os dias.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-800">{t('plan.empty.title')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('plan.empty.body')}</p>
           {isGenerating ? (
             <p className="mt-4 text-sm font-medium text-emerald-600">
-              {generationStage ?? 'A gerar…'}
+              {generationStage ? t(generationStage) : t('generation.hint')}
             </p>
           ) : (
             <button
@@ -52,7 +52,7 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
               className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
             >
               <SparklesIcon size={16} />
-              Gerar plano semanal
+              {t('plan.empty.cta')}
             </button>
           )}
         </div>
@@ -69,14 +69,17 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
         style={{paddingTop: 'env(safe-area-inset-top)'}}
       >
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Plano semanal</h1>
+          <h1 className="text-xl font-bold text-slate-800">{t('plan.title')}</h1>
           <p className="text-sm text-slate-400">
-            Gerado a {fmtDateTime(plan.generatedAt)} · {plan.week.length} dias
+            {t('plan.generatedAt', {
+              datetime: fmtDateTime(plan.generatedAt),
+              count: plan.week.length,
+            })}
           </p>
         </div>
         <button
           onClick={onOpenSettings}
-          aria-label="Definições"
+          aria-label={t('common.settings')}
           className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
         >
           <GearIcon size={22} />
@@ -105,8 +108,8 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
                   : 'border border-slate-200 bg-white text-slate-600')
               }
             >
-              {WEEKDAY_LABELS[d]}
-              {isToday ? ' · hoje' : ''}
+              {t(WEEKDAY_KEY[d])}
+              {isToday ? ` · ${t('plan.todayMark')}` : ''}
             </button>
           );
         })}
@@ -119,32 +122,32 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
           {targets && totals ? (
             <section className="mb-5 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:mb-0">
               <h2 className="mb-3 text-sm font-semibold text-slate-700">
-                Totais de {WEEKDAY_LABELS[selectedDay].toLowerCase()} vs alvo
+                {t('plan.totalsTitle', {day: t(WEEKDAY_KEY[selectedDay]).toLowerCase()})}
               </h2>
               <div className="space-y-3">
                 <MacroBar
-                  label="Calorias"
+                  label={t('macro.kcal')}
                   value={totals.kcal}
                   target={targets.calorieTarget}
                   unit="kcal"
                   color="bg-emerald-500"
                 />
                 <MacroBar
-                  label="Proteína"
+                  label={t('macro.protein')}
                   value={totals.protein}
                   target={targets.proteinG}
                   unit="g"
                   color="bg-sky-500"
                 />
                 <MacroBar
-                  label="Hidratos"
+                  label={t('macro.carbs')}
                   value={totals.carbs}
                   target={targets.carbsG}
                   unit="g"
                   color="bg-amber-500"
                 />
                 <MacroBar
-                  label="Gordura"
+                  label={t('macro.fat')}
                   value={totals.fat}
                   target={targets.fatG}
                   unit="g"
@@ -173,7 +176,7 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
           {/* Quick preview of the other days */}
           <section className="mt-6">
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
-              Outros dias
+              {t('plan.otherDays')}
             </h2>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
               {DAY_KEYS.filter((d) => d !== selectedDay).map((d) => {
@@ -189,10 +192,10 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
                     className="flex items-center justify-between rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left shadow-sm active:bg-slate-50"
                   >
                     <span className="text-sm font-semibold text-slate-700">
-                      {WEEKDAY_LABELS[d]}
+                      {t(WEEKDAY_KEY[d])}
                     </span>
                     <span className="ml-3 truncate text-xs text-slate-400">
-                      {previews.length > 0 ? previews.join(' · ') : 'Sem sugestões'}
+                      {previews.length > 0 ? previews.join(' · ') : t('plan.noSuggestions')}
                     </span>
                   </button>
                 );
@@ -201,9 +204,7 @@ export function Plan({onOpenSettings}: {onOpenSettings: () => void}) {
           </section>
         </>
       ) : (
-        <p className="mt-10 text-center text-sm text-slate-400">
-          Este dia ainda não tem refeições geradas.
-        </p>
+        <p className="mt-10 text-center text-sm text-slate-400">{t('plan.dayEmpty')}</p>
       )}
     </div>
   );

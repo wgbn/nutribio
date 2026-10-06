@@ -1,7 +1,14 @@
 // Gemini integration: generates the weekly meal plan with structured output
 // (JSON schema), then validates and normalizes it into our domain types.
+//
+// Prompt strategy (DECISIONS #25/#26): instructions and schema descriptions
+// are written in ENGLISH (most reliable across models), with a mandatory
+// output-language block and a country-of-residence block so dish content is
+// written in the user's locale with country-typical ingredients.
+// User-facing errors are localized via i18n keys at throw time.
 
 import {GoogleGenAI} from '@google/genai';
+import i18next from 'i18next';
 
 import type {
   BioRecord,
@@ -13,7 +20,15 @@ import type {
   Profile,
   WeekDayId,
 } from '../types';
-import {GOAL_LABELS, mealLabel, SEX_LABELS} from './calculations';
+import {activeLocale, LOCALE_LANGUAGE_NAMES} from '../i18n/locales';
+import {
+  EXERCISE_TYPE_LABEL_KEYS,
+  FREQUENCY_LABEL_KEYS,
+  GOAL_LABEL_KEYS,
+  INTENSITY_LABEL_KEYS,
+  SEX_LABEL_KEYS,
+} from './calculations';
+import {countryName, type CountryCode} from './countries';
 import {describeError} from './errors';
 import {parseTimeToMinutes, workoutMealIds} from './mealTimes';
 import {emptyMealSlot, SLOT_ORDER, WEEK_ORDER} from './plan';
@@ -21,35 +36,61 @@ import {fmt, fmtGrams} from './units';
 
 export class GeminiError extends Error {}
 
+/**
+ * Per-country cuisine hints (English, for the prompt): steer the model to
+ * products commonly found in that country's supermarkets (DECISIONS #26).
+ */
+export const COUNTRY_CUISINE_HINTS: Record<CountryCode, string> = {
+  PT: 'Typical Portuguese products: pescada (hake), dourada (sea bream), robalo (sea bass), bacalhau (salted cod), sardinhas, polvo, queijo fresco, requeijão, broa, pão de milho/centeio, azeite, legumes da horta (couve, nabo, abóbora), fruta portuguesa (maçã, pera, laranja do Algarve).',
+  BR: 'Typical Brazilian products: frango, patinho/músculo, tilápia, pescada branca, ovos, arroz, feijão preto/carioca, mandioca/aipim, batata-doce, pão francês, tapioca, queijo minas, requeijão, iogurte natural, mamão, banana, abacaxi, acerola.',
+  ES: 'Typical Spanish products: merluza, dorada, lubina, bacalao, jamón serrano (lean), pollo, pavo, huevos, arroz, patata, pan integral, aceite de oliva, gazpacho vegetables (tomate, pimiento, pepino), naranja, manzana, queso fresco.',
+  FR: "Typical French products: cabillaud, dorade, saumon, poulet, dinde, œufs, fromage blanc 0%, yaourt nature, pain complet, riz, pommes de terre, huile d'olive, légumes du marché, pomme, poire, fromage frais léger.",
+  DE: "Typical German products: Hähnchen, Pute, Lachs, Kabeljau, Eier, Magerquark, Skyr, Naturjoghurt, Vollkornbrot, Haferflocken, Kartoffeln, Reis, Olivenöl, Gemüse (Brokkoli, Paprika, Zucchini), Apfel, Birne, Harzer Käse.",
+  IT: "Typical Italian products: merluzzo/nasello, orata, spigola, salmone, pollo, tacchino, uova, ricotta magra, yogurt bianco, pane integrale, riso, avena, olio d'oliva, pomodoro, zucchine, melanzane, mela, pera.",
+  NL: "Typical Dutch products: kip, kalkoen, zalm, kabeljauw, eieren, magere kwark, skyr, magere yoghurt, volkorenbrood, haver, aardappelen, rijst, olijfolie, groenten (broccoli, paprika), appel, peer, magere kaas.",
+  BE: "Typical Belgian products: chicken, turkey, salmon, cod, eggs, cottage cheese, skimmed yoghurt, wholegrain bread, oats, potatoes, rice, olive oil, vegetables (Belgian endive, carrots), apples, pears, lean cheese.",
+  IE: "Typical Irish products: chicken, turkey, salmon, cod, haddock, eggs, cottage cheese, low-fat yoghurt, wholemeal bread, oats, potatoes, rice, olive oil, vegetables, apples, berries.",
+  AT: "Typical Austrian products: Hühnchen, Pute, Lachs, Kabeljau, Eier, Magerquark, Skyr, Vollkornbrot, Haferflocken, Kartoffeln, Reis, Olivenöl, Gemüse, Apfel, Birne, magere Milchprodukte.",
+  LU: "Typical Luxembourgish products: chicken, turkey, salmon, cod, eggs, cottage cheese, skyr, wholegrain bread, oats, potatoes, rice, olive oil, seasonal vegetables, apples, pears.",
+  GB: "Typical British products: chicken, turkey, salmon, cod, haddock, eggs, cottage cheese, Greek-style yoghurt (0%), wholemeal bread, oats, potatoes, rice, olive oil, vegetables, apples, berries, lean mince.",
+};
+
 const DISH_SCHEMA = {
   type: 'object',
   properties: {
-    name: {type: 'string', description: 'Nome curto e apelativo do prato, em português de Portugal'},
-    description: {type: 'string', description: 'Descrição breve da preparação'},
+    name: {type: 'string', description: 'Short, appealing dish name, in the required output language'},
+    description: {type: 'string', description: 'Brief preparation description, in the required output language'},
     ingredients: {
       type: 'array',
       items: {
         type: 'object',
         properties: {
-          item: {type: 'string', description: 'Ingrediente, ex.: "peito de frango grelhado"'},
-          amountGrams: {type: 'number', description: 'Quantidade em gramas (precisa)'},
-          unit: {type: 'string', description: 'Unidade adicional se útil, ex.: "1 unidade", "1 col. de sopa"'},
+          item: {
+            type: 'string',
+            description:
+              'Ingredient name, in the required output language, typical of the user country (e.g. "grilled chicken breast")',
+          },
+          amountGrams: {type: 'number', description: 'Precise quantity in grams'},
+          unit: {
+            type: 'string',
+            description: 'Additional practical unit if helpful, e.g. "1 unit", "1 tbsp"',
+          },
         },
         required: ['item', 'amountGrams'],
       },
     },
     macros: {
       type: 'object',
-      description: 'Macros aproximados da porção inteira',
+      description: 'Approximate macros for the whole portion',
       properties: {
         kcal: {type: 'number'},
-        protein: {type: 'number', description: 'gramas'},
-        carbs: {type: 'number', description: 'gramas'},
-        fat: {type: 'number', description: 'gramas'},
+        protein: {type: 'number', description: 'grams'},
+        carbs: {type: 'number', description: 'grams'},
+        fat: {type: 'number', description: 'grams'},
       },
       required: ['kcal', 'protein', 'carbs', 'fat'],
     },
-    notes: {type: 'string', description: 'Dica de preparação ou substituição'},
+    notes: {type: 'string', description: 'Preparation or substitution tip, in the required output language'},
   },
   required: ['name', 'ingredients'],
 };
@@ -60,7 +101,7 @@ const MEAL_SCHEMA = {
     slot: {type: 'string', enum: [...SLOT_ORDER]},
     variations: {
       type: 'array',
-      description: 'Exatamente 3 variações de prato para esta refeição',
+      description: 'Exactly 3 dish variations for this meal',
       items: DISH_SCHEMA,
       minItems: 3,
       maxItems: 3,
@@ -81,7 +122,7 @@ const DAY_SCHEMA = {
 const PLAN_SCHEMA = {
   type: 'object',
   properties: {
-    overview: {type: 'string', description: 'Resumo de 2-3 frases do plano semanal'},
+    overview: {type: 'string', description: '2-3 sentence summary of the weekly plan, in the required output language'},
     week: {type: 'array', items: DAY_SCHEMA},
   },
   required: ['week'],
@@ -132,7 +173,7 @@ function normalizeDish(raw: unknown): Dish | null {
 
 export function normalizeWeek(raw: unknown): DayPlan[] {
   if (!raw || typeof raw !== 'object' || !Array.isArray((raw as {week?: unknown}).week)) {
-    throw new GeminiError('Resposta do Gemini sem o formato esperado.');
+    throw new GeminiError(i18next.t('errors.badResponse'));
   }
   const byDay = new Map<WeekDayId, Map<MealSlot['id'], Dish[]>>();
 
@@ -168,7 +209,7 @@ export function normalizeWeek(raw: unknown): DayPlan[] {
 
   const populated = week.filter((d) => d.meals.some((m) => m.variations.length > 0));
   if (populated.length === 0) {
-    throw new GeminiError('O Gemini devolveu um plano vazio. Tenta novamente.');
+    throw new GeminiError(i18next.t('errors.emptyPlan'));
   }
   return populated;
 }
@@ -179,105 +220,122 @@ export function buildPrompt(
   targets: NutritionTargets,
   weightKg: number,
 ): string {
+  const locale = activeLocale();
+  const languageName = LOCALE_LANGUAGE_NAMES[locale];
+  const country = profile.country;
+  // English country name for the English-instruction prompt.
+  const countryLabel = countryName(country, 'en');
+
   const bioLines = bio
     ? [
-        `- Peso: ${fmt(bio.weight, 1)} kg`,
-        bio.bodyFat !== undefined ? `- Gordura corporal: ${fmt(bio.bodyFat, 1)}%` : null,
-        bio.water !== undefined ? `- Água: ${fmt(bio.water, 1)}%` : null,
-        bio.bmr !== undefined ? `- Metabolismo basal (balança): ${fmt(bio.bmr)} kcal` : null,
-        bio.visceralFat !== undefined ? `- Gordura visceral: ${fmt(bio.visceralFat, 1)}` : null,
-        bio.bmi !== undefined ? `- IMC: ${fmt(bio.bmi, 1)}` : null,
-        bio.muscle !== undefined ? `- Músculo: ${fmt(bio.muscle, 1)} kg` : null,
-        bio.protein !== undefined ? `- Proteína: ${fmt(bio.protein, 1)}%` : null,
-        bio.boneMass !== undefined ? `- Massa óssea: ${fmt(bio.boneMass, 1)} kg` : null,
-        bio.bodyAge !== undefined ? `- Idade corporal: ${fmt(bio.bodyAge)}` : null,
-        bio.idealWeight !== undefined ? `- Peso ideal: ${fmt(bio.idealWeight, 1)} kg` : null,
+        `- Weight: ${fmt(bio.weight, 1)} kg`,
+        bio.bodyFat !== undefined ? `- Body fat: ${fmt(bio.bodyFat, 1)}%` : null,
+        bio.water !== undefined ? `- Body water: ${fmt(bio.water, 1)}%` : null,
+        bio.bmr !== undefined ? `- Basal metabolism (scale): ${fmt(bio.bmr)} kcal` : null,
+        bio.visceralFat !== undefined ? `- Visceral fat: ${fmt(bio.visceralFat, 1)}` : null,
+        bio.bmi !== undefined ? `- BMI: ${fmt(bio.bmi, 1)}` : null,
+        bio.muscle !== undefined ? `- Muscle mass: ${fmt(bio.muscle, 1)} kg` : null,
+        bio.protein !== undefined ? `- Body protein: ${fmt(bio.protein, 1)}%` : null,
+        bio.boneMass !== undefined ? `- Bone mass: ${fmt(bio.boneMass, 1)} kg` : null,
+        bio.bodyAge !== undefined ? `- Body age: ${fmt(bio.bodyAge)}` : null,
+        bio.idealWeight !== undefined ? `- Ideal weight: ${fmt(bio.idealWeight, 1)} kg` : null,
       ].filter((l): l is string => l !== null)
-    : ['- Sem dados de bioimpedância registados.'];
+    : ['- No bioimpedance measurements recorded.'];
 
   const workoutMinutes = profile.exercise.active
     ? parseTimeToMinutes(profile.exercise.workoutTime)
     : null;
   const exercise = profile.exercise.active
-    ? `${profile.exercise.frequency} por semana, intensidade ${profile.exercise.intensity}, tipo ${profile.exercise.type}` +
-      (workoutMinutes !== null ? `, horário do treino ${profile.exercise.workoutTime}` : '')
-    : 'não pratica exercício físico';
+    ? `${i18next.t(FREQUENCY_LABEL_KEYS[profile.exercise.frequency])}, ${i18next.t(
+        INTENSITY_LABEL_KEYS[profile.exercise.intensity],
+      )} intensity, type: ${i18next.t(EXERCISE_TYPE_LABEL_KEYS[profile.exercise.type])}` +
+      (workoutMinutes !== null ? `, workout time ${profile.exercise.workoutTime}` : '')
+    : 'does not exercise';
 
   const workoutSection = (() => {
     if (workoutMinutes === null) return '';
     const {preId, postId} = workoutMealIds(workoutMinutes);
-    const lines = [`- Horário do treino: ${profile.exercise.workoutTime}`];
+    const lines = [`- Workout time: ${profile.exercise.workoutTime}`];
     if (preId) {
       lines.push(
-        `- Refeição pré-treino: ${mealLabel(preId)} — reforça hidratos de digestão moderada e proteína nesta refeição.`,
+        `- Pre-workout meal: ${i18next.t(`meal.${preId}`)} — reinforce moderate-digestion carbs and protein in this meal.`,
       );
     }
     if (postId) {
       lines.push(
-        `- Refeição pós-treino: ${mealLabel(postId)} — reforça proteína e hidratos para recuperação nesta refeição.`,
+        `- Post-workout meal: ${i18next.t(`meal.${postId}`)} — reinforce protein and carbs for recovery in this meal.`,
       );
     }
-    return `\n## Treino\n${lines.join('\n')}\n`;
+    return `\n## Workout\n${lines.join('\n')}\n`;
   })();
 
   const splitLines = targets.mealSplit
-    .map((m) => `  - ${m.label}: ${m.percent}% (~${m.kcal} kcal, ${m.proteinG} g prot, ${m.carbsG} g hidr, ${m.fatG} g gor)`)
+    .map((m) => `  - ${i18next.t(`meal.${m.id}`)}: ${m.percent}% (~${m.kcal} kcal, ${m.proteinG} g protein, ${m.carbsG} g carbs, ${m.fatG} g fat)`)
     .join('\n');
 
   const excludedFoods = (profile.excludedFoods ?? '').trim();
   const observations = (profile.observations ?? '').trim();
   const preferencesLines: string[] = [];
   if (excludedFoods) {
-    preferencesLines.push(`- Alimentos a excluir: ${excludedFoods} — NUNCA incluir estes alimentos em nenhum prato.`);
+    preferencesLines.push(
+      `- Excluded foods: ${excludedFoods} — NEVER include any of these foods in any dish.`,
+    );
   }
   if (observations) {
-    preferencesLines.push(`- Observações gerais do utilizador/nutricionista: ${observations} — considera estas indicações ao criar o plano.`);
+    preferencesLines.push(
+      `- General observations from the user/nutritionist: ${observations} — take these into account when creating the plan.`,
+    );
   }
   const preferencesSection =
     preferencesLines.length > 0
-      ? `\n## Restrições e preferências do utilizador\n${preferencesLines.join('\n')}\n`
+      ? `\n## User restrictions and preferences\n${preferencesLines.join('\n')}\n`
       : '';
 
-  return `Cria um plano alimentar semanal completo, em português de Portugal.
+  return `You are an expert nutritionist. Create a complete weekly meal plan for one person.
 
-## Perfil do utilizador
-- Nome: ${profile.name}
-- Sexo: ${SEX_LABELS[profile.sex]}
-- Idade: ${profile.age} anos
-- Altura: ${fmt(profile.height, 0)} cm
-- Peso atual: ${fmt(weightKg, 1)} kg (peso mais recente da balança ou inicial)
-- Objetivo: ${GOAL_LABELS[profile.goal]}
-- Exercício: ${exercise}
+## User profile
+- Sex: ${i18next.t(SEX_LABEL_KEYS[profile.sex])}
+- Age: ${profile.age} years
+- Height: ${fmt(profile.height, 0)} cm
+- Current weight: ${fmt(weightKg, 1)} kg (most recent scale reading or initial weight)
+- Goal: ${i18next.t(GOAL_LABEL_KEYS[profile.goal])}
+- Exercise: ${exercise}
 
-## Dados de bioimpedância (última medição)
+## Country of residence (IMPORTANT)
+The user lives in ${countryLabel}. Prioritize ingredients, foods and dishes that are typical of, or commonly found in supermarkets in ${countryLabel}, so shopping is easy. Use the local product names, written in ${languageName}. Typical products to prefer: ${COUNTRY_CUISINE_HINTS[country]}
+
+## Bioimpedance (latest measurement)
 ${bioLines.join('\n')}
 
-## Cálculos (já feitos — usa estes valores, não recalculas)
-- TMB Mifflin-St Jeor: ${fmt(targets.bmrMifflin)} kcal
-- TMB Harris-Benedict: ${fmt(targets.bmrHarrisBenedict)} kcal
-- TDEE (gasto total diário): ${fmt(targets.tdee)} kcal
-- Faixa calórica diária: ${fmt(targets.calorieMin)} – ${fmt(targets.calorieMax)} kcal (alvo: ${fmt(targets.calorieTarget)} kcal)
-- Proteína: ${fmtGrams(targets.proteinG)} g/dia
-- Gordura: ${fmtGrams(targets.fatG)} g/dia (saturada < ${fmtGrams(targets.saturatedFatLimitG)} g/dia)
-- Hidratos de carbono: ${fmtGrams(targets.carbsG)} g/dia
+## Calculations (already done — use these values, do NOT recalculate)
+- BMR Mifflin-St Jeor: ${fmt(targets.bmrMifflin)} kcal
+- BMR Harris-Benedict: ${fmt(targets.bmrHarrisBenedict)} kcal
+- TDEE (total daily energy expenditure): ${fmt(targets.tdee)} kcal
+- Daily calorie range: ${fmt(targets.calorieMin)} – ${fmt(targets.calorieMax)} kcal (target: ${fmt(targets.calorieTarget)} kcal)
+- Protein: ${fmtGrams(targets.proteinG)} g/day
+- Fat: ${fmtGrams(targets.fatG)} g/day (saturated < ${fmtGrams(targets.saturatedFatLimitG)} g/day)
+- Carbohydrates: ${fmtGrams(targets.carbsG)} g/day
 
-## Distribuição calórica por refeição (alvos aproximados)
+## Calorie distribution per meal (approximate targets)
 ${splitLines}
 ${workoutSection}${preferencesSection}
-## Regras obrigatórias
-1. 7 dias: segunda, terça, quarta, quinta, sexta, sábado, domingo.
-2. 5 refeições por dia, com EXATAMENTE 3 variações de prato em cada uma: pequeno-almoço, lanche da manhã, almoço, lanche da tarde, jantar.
-3. Quantidades PRECISAS em gramas (pesadas), por exemplo "peito de frango grelhado: 180 g", "batata-doce cozida: 280 g".
-4. Proteína em todas as refeições: frango, peru, peixe (pescada, dourada, robalo, salmão), ovos, atum ao natural, laticínios magros (iogurte natural 0%, queijo fresco magro, leite magro).
-5. Hidratos: batata-doce, arroz, pão integral, aveia, fruta.
-6. Gorduras: azeite medido (colher), queijo, iogurte, frutos secos em porção pequena. Evitar fritos, manteiga, ghee, enchidos, natas, queijos curados em excesso. Gordura saturada baixa.
-7. Legumes/salada generosos no almoço e jantar.
-8. Os macros de cada variação de prato devem somar aproximadamente os alvos da refeição correspondente (variação ±10-15%).
-9. A soma dos macros selecionados do dia deve aproximar os totais diários.
-10. Nomes de pratos curtos; notas com dicas de preparação ou trocas.
-11. Respeita rigorosamente os alimentos a excluir e as observações do utilizador indicados em "Restrições e preferências do utilizador" — nenhum prato pode conter alimentos excluídos e as observações devem ser refletidas no plano.
+## Output language (MANDATORY)
+Write ALL human-readable content — the overview, dish names, descriptions, ingredient names, units and notes — in ${languageName} (${locale}). Food and product names must be the ones a shopper finds in ${countryLabel}, written in ${languageName}.
 
-Devolve APENAS o JSON no schema indicado.`;
+## Mandatory rules
+1. 7 days: monday, tuesday, wednesday, thursday, friday, saturday, sunday (day enum).
+2. 5 meals per day, with EXACTLY 3 dish variations each: ${SLOT_ORDER.map((id) => i18next.t(`meal.${id}`)).join(', ')} (slot enum).
+3. PRECISE quantities in grams (weighed), e.g. "grilled chicken breast: 180 g", "boiled sweet potato: 280 g".
+4. Protein in every meal: lean meats and fish typical of ${countryLabel}, eggs, tuna (in water), low-fat dairy.
+5. Carbs: prefer the staple carbs of ${countryLabel} (e.g. potatoes, rice, wholegrain bread, oats, fruit).
+6. Fats: olive oil measured by the spoon, cheese, yoghurt, small portions of nuts. Avoid fried food, butter, ghee, cured sausages, cream. Keep saturated fat low.
+7. Generous vegetables/salad at lunch and dinner.
+8. Each dish variation's macros should approximately match the corresponding meal targets (±10-15%).
+9. The sum of the selected daily macros should approach the daily totals.
+10. Short dish names; notes with preparation tips or substitutions, in ${languageName}.
+11. Strictly respect the excluded foods and the observations listed in "User restrictions and preferences" — no dish may contain an excluded food, and the observations must be reflected in the plan.
+
+Return ONLY the JSON in the given schema.`;
 }
 
 function extractJson(text: string): unknown {
@@ -301,7 +359,7 @@ function extractJson(text: string): unknown {
         // fall through
       }
     }
-    throw new GeminiError('Não foi possível interpretar a resposta do Gemini como JSON.');
+    throw new GeminiError(i18next.t('errors.unparseable'));
   }
 }
 
@@ -315,12 +373,16 @@ export interface GenerateOptions {
   onProgress?: (stage: string) => void;
 }
 
+/** Generation progress stage keys (translated by the UI). */
+export const STAGE_GENERATING = 'generation.stage.generating';
+export const STAGE_RETRYING = 'generation.stage.retrying';
+
 /** Generate the weekly plan via Gemini. Returns the normalized week + overview. */
 export async function generateWeeklyPlan(
   options: GenerateOptions,
-): Promise<{week: DayPlan[]; overview: string}> {
+): Promise<{week: DayPlan[]; overview: string; locale: string}> {
   if (!options.apiKey.trim()) {
-    throw new GeminiError('Sem chave da API Gemini. Adiciona a chave nas Definições.');
+    throw new GeminiError(i18next.t('errors.missingKey'));
   }
 
   const ai = new GoogleGenAI({apiKey: options.apiKey.trim()});
@@ -329,7 +391,7 @@ export async function generateWeeklyPlan(
   let lastError: unknown = null;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      options.onProgress?.(attempt === 0 ? 'A gerar o plano semanal…' : 'A tentar novamente…');
+      options.onProgress?.(attempt === 0 ? STAGE_GENERATING : STAGE_RETRYING);
       const response = await ai.models.generateContent({
         model: options.model,
         contents: prompt,
@@ -342,7 +404,7 @@ export async function generateWeeklyPlan(
       });
       const text = response.text;
       if (!text) {
-        throw new GeminiError('Resposta vazia do Gemini.');
+        throw new GeminiError(i18next.t('errors.emptyResponse'));
       }
       const raw = extractJson(text);
       const week = normalizeWeek(raw);
@@ -350,7 +412,7 @@ export async function generateWeeklyPlan(
         raw && typeof raw === 'object' && typeof (raw as {overview?: unknown}).overview === 'string'
           ? (raw as {overview: string}).overview
           : '';
-      return {week, overview};
+      return {week, overview, locale: activeLocale()};
     } catch (err) {
       lastError = err;
     }
@@ -359,5 +421,5 @@ export async function generateWeeklyPlan(
   if (lastError instanceof GeminiError) throw lastError;
   // Surface the real API error (e.g. "401 UNAUTHENTICATED: API key not
   // valid") instead of a generic message, so it can be diagnosed on mobile.
-  throw new GeminiError(`A geração do plano falhou: ${describeError(lastError)}`);
+  throw new GeminiError(i18next.t('errors.apiFailed', {detail: describeError(lastError)}));
 }

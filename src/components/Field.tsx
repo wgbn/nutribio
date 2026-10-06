@@ -1,5 +1,5 @@
-// Form primitives: labeled field, text/number inputs (pt-PT comma decimals),
-// select and chip group.
+// Form primitives: labeled field, text/number inputs (comma or dot decimals,
+// displayed with the active locale's separator), select and chip group.
 
 import {
   useEffect,
@@ -9,6 +9,8 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
+
+import {decimalSeparator} from '../lib/units';
 
 export function Field({
   label,
@@ -57,7 +59,9 @@ export function NumberInput({
 
   // Sync the draft from the committed value whenever we are not typing.
   useEffect(() => {
-    if (!focused) setDraft(value === '' ? '' : String(value).replace('.', ','));
+    if (!focused) {
+      setDraft(value === '' ? '' : String(value).replace('.', decimalSeparator()));
+    }
   }, [value, focused]);
 
   return (

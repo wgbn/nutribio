@@ -1,24 +1,28 @@
 // Meal slot card: label, time window, selected dish, ingredients, macros,
 // and an optional variation picker.
 
+import {useTranslation} from 'react-i18next';
+
 import type {Macros, MealSlot} from '../types';
 import {getSelectedDish} from '../lib/plan';
 import {fmt} from '../lib/units';
+import type {WorkoutBadge} from '../lib/mealTimes';
 
 export function MacroChips({macros}: {macros: Macros}) {
+  const {t} = useTranslation();
   return (
     <div className="flex flex-wrap gap-1.5 text-[11px] font-medium tabular-nums">
       <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">
         {fmt(macros.kcal, 0)} kcal
       </span>
       <span className="rounded-full bg-sky-50 px-2 py-0.5 text-sky-700">
-        P {fmt(macros.protein, 0)}g
+        {t('macro.proteinShort')} {fmt(macros.protein, 0)}g
       </span>
       <span className="rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">
-        C {fmt(macros.carbs, 0)}g
+        {t('macro.carbsShort')} {fmt(macros.carbs, 0)}g
       </span>
       <span className="rounded-full bg-rose-50 px-2 py-0.5 text-rose-700">
-        G {fmt(macros.fat, 0)}g
+        {t('macro.fatShort')} {fmt(macros.fat, 0)}g
       </span>
     </div>
   );
@@ -33,14 +37,15 @@ export function MealCard({
   meal: MealSlot;
   showPicker?: boolean;
   onPick?: (index: number) => void;
-  /** Dynamic workout badge: 'Pré-treino' | 'Pós-treino' | null. */
-  badge?: 'Pré-treino' | 'Pós-treino' | null;
+  /** Dynamic workout badge kind: 'pre' | 'post' | null (DECISIONS #18). */
+  badge?: WorkoutBadge;
 }) {
+  const {t} = useTranslation();
   const dish = getSelectedDish(meal);
   const badgeClass =
-    badge === 'Pré-treino'
+    badge === 'pre'
       ? 'bg-amber-100 text-amber-700'
-      : badge === 'Pós-treino'
+      : badge === 'post'
         ? 'bg-sky-100 text-sky-700'
         : '';
   return (
@@ -53,7 +58,7 @@ export function MealCard({
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badgeClass}`}
               >
-                {badge}
+                {t(`badge.${badge}`)}
               </span>
             ) : null}
           </div>
@@ -85,12 +90,12 @@ export function MealCard({
           ) : null}
         </>
       ) : (
-        <p className="text-sm text-slate-400">Sem sugestão para esta refeição.</p>
+        <p className="text-sm text-slate-400">{t('meal.noDish')}</p>
       )}
 
       {showPicker && meal.variations.length > 1 ? (
         <div className="mt-3 border-t border-slate-100 pt-3">
-          <p className="mb-2 text-xs font-medium text-slate-400">Trocar variação:</p>
+          <p className="mb-2 text-xs font-medium text-slate-400">{t('meal.changeVariation')}:</p>
           <div className="flex flex-wrap gap-1.5">
             {meal.variations.map((v, i) => (
               <button

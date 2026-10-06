@@ -11,6 +11,8 @@ import {
 } from 'chart.js';
 import {Line} from 'react-chartjs-2';
 
+import {activeIntlLocale} from '../i18n/locales';
+
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Filler);
 
 export function ChartBlock({
@@ -51,7 +53,7 @@ export function ChartBlock({
       tooltip: {
         callbacks: {
           label: (ctx: {parsed: {y: number | null}}) =>
-            ` ${new Intl.NumberFormat('pt-PT', {maximumFractionDigits: 1}).format(ctx.parsed.y ?? 0)}${unit ? ` ${unit}` : ''}`,
+            ` ${new Intl.NumberFormat(activeIntlLocale(), {maximumFractionDigits: 1}).format(ctx.parsed.y ?? 0)}${unit ? ` ${unit}` : ''}`,
         },
       },
     },

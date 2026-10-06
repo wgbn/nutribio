@@ -1,36 +1,31 @@
-// First-run wizard: welcome + basic profile + optional bioimpedance step.
-// Saves locally and offers to generate the first plan.
+// First-run wizard: basic profile (incl. country) + optional bioimpedance
+// step + diet preferences. Saves locally and offers to generate the plan.
 
 import {useMemo, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 
 import {ChipGroup, Field, NumberInput, Select, TextArea, TextInput} from '../components/Field';
 import {ConfirmDialog} from '../components/ConfirmDialog';
 import {LeafIcon, SparklesIcon} from '../components/icons';
 import {useStore} from '../hooks/useStore';
+import {activeIntlLocale} from '../i18n/locales';
 import {
-  EXERCISE_TYPE_LABELS,
-  FREQUENCY_LABELS,
-  GOAL_LABELS,
-  INTENSITY_LABELS,
-  SEX_LABELS,
+  EXERCISE_TYPE_LABEL_KEYS,
+  FREQUENCY_LABEL_KEYS,
+  GOAL_LABEL_KEYS,
+  INTENSITY_LABEL_KEYS,
+  SEX_LABEL_KEYS,
 } from '../lib/calculations';
+import {countryOptions, defaultCountryFor, type CountryCode} from '../lib/countries';
 import {todayKey} from '../lib/mealTimes';
-import type {BioRecord, ExerciseFrequency, ExerciseIntensity, ExerciseType, Goal, Sex} from '../types';
-
-const GOAL_OPTIONS = (Object.keys(GOAL_LABELS) as Goal[]).map((g) => ({value: g, label: GOAL_LABELS[g]}));
-const SEX_OPTIONS = (Object.keys(SEX_LABELS) as Sex[]).map((s) => ({value: s, label: SEX_LABELS[s]}));
-const FREQ_OPTIONS = (Object.keys(FREQUENCY_LABELS) as ExerciseFrequency[]).map((f) => ({
-  value: f,
-  label: FREQUENCY_LABELS[f],
-}));
-const INTENSITY_OPTIONS = (Object.keys(INTENSITY_LABELS) as ExerciseIntensity[]).map((i) => ({
-  value: i,
-  label: INTENSITY_LABELS[i],
-}));
-const TYPE_OPTIONS = (Object.keys(EXERCISE_TYPE_LABELS) as ExerciseType[]).map((t) => ({
-  value: t,
-  label: EXERCISE_TYPE_LABELS[t],
-}));
+import type {
+  BioRecord,
+  ExerciseFrequency,
+  ExerciseIntensity,
+  ExerciseType,
+  Goal,
+  Sex,
+} from '../types';
 
 interface FormState {
   name: string;
@@ -39,6 +34,7 @@ interface FormState {
   height: number | '';
   weight: number | '';
   goal: Goal;
+  country: CountryCode;
   exerciseActive: boolean;
   frequency: ExerciseFrequency;
   intensity: ExerciseIntensity;
@@ -75,32 +71,35 @@ const emptyBio = {
   idealWeight: '' as number | '',
 };
 
-const BIO_FIELDS: Array<{key: keyof FormState['bio']; label: string; hint?: string}> = [
-  {key: 'weight', label: 'Peso atual (kg)'},
-  {key: 'bodyFat', label: 'Gordura corporal (%)'},
-  {key: 'water', label: 'Água (%)'},
-  {key: 'bmr', label: 'Metabolismo basal (kcal)'},
-  {key: 'visceralFat', label: 'Gordura visceral'},
-  {key: 'bmi', label: 'IMC'},
-  {key: 'muscle', label: 'Músculo (kg)'},
-  {key: 'protein', label: 'Proteína (%)'},
-  {key: 'boneMass', label: 'Massa óssea (kg)'},
-  {key: 'bodyAge', label: 'Idade corporal'},
-  {key: 'idealWeight', label: 'Peso ideal (kg)'},
+const BIO_FIELDS: Array<{key: keyof FormState['bio']; labelKey: string}> = [
+  {key: 'weight', labelKey: 'bio.weight'},
+  {key: 'bodyFat', labelKey: 'bio.bodyFat'},
+  {key: 'water', labelKey: 'bio.water'},
+  {key: 'bmr', labelKey: 'bio.bmr'},
+  {key: 'visceralFat', labelKey: 'bio.visceralFat'},
+  {key: 'bmi', labelKey: 'bio.bmi'},
+  {key: 'muscle', labelKey: 'bio.muscle'},
+  {key: 'protein', labelKey: 'bio.protein'},
+  {key: 'boneMass', labelKey: 'bio.boneMass'},
+  {key: 'bodyAge', labelKey: 'bio.bodyAge'},
+  {key: 'idealWeight', labelKey: 'bio.idealWeight'},
 ];
 
 export function Onboarding({onDone}: {onDone: () => void}) {
+  const {t} = useTranslation();
   const {settings, saveSettings, saveProfile, saveBioRecord, generatePlan} = useStore();
   const [step, setStep] = useState(0);
   const [apiKey, setApiKey] = useState(settings.geminiApiKey);
   const [showKey, setShowKey] = useState(false);
-  const [form, setForm] = useState<FormState>({
+  const [form, setForm] = useState<FormState>(() => ({
     name: '',
     sex: 'male',
     age: '',
     height: '',
     weight: '',
     goal: 'lose_fat',
+    // Preselect from the device region / app locale (DECISIONS #26).
+    country: defaultCountryFor(navigator.languages ?? [navigator.language]),
     exerciseActive: false,
     frequency: 'none',
     intensity: 'moderate',
@@ -109,9 +108,42 @@ export function Onboarding({onDone}: {onDone: () => void}) {
     excludedFoods: '',
     observations: '',
     bio: emptyBio,
-  });
+  }));
   const [askGenerate, setAskGenerate] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  const goalOptions = useMemo(
+    () => (Object.keys(GOAL_LABEL_KEYS) as Goal[]).map((g) => ({value: g, label: t(GOAL_LABEL_KEYS[g])})),
+    [t],
+  );
+  const sexOptions = useMemo(
+    () => (Object.keys(SEX_LABEL_KEYS) as Sex[]).map((s) => ({value: s, label: t(SEX_LABEL_KEYS[s])})),
+    [t],
+  );
+  const freqOptions = useMemo(
+    () =>
+      (Object.keys(FREQUENCY_LABEL_KEYS) as ExerciseFrequency[])
+        .filter((f) => f !== 'none')
+        .map((f) => ({value: f, label: t(FREQUENCY_LABEL_KEYS[f])})),
+    [t],
+  );
+  const intensityOptions = useMemo(
+    () =>
+      (Object.keys(INTENSITY_LABEL_KEYS) as ExerciseIntensity[]).map((i) => ({
+        value: i,
+        label: t(INTENSITY_LABEL_KEYS[i]),
+      })),
+    [t],
+  );
+  const typeOptions = useMemo(
+    () =>
+      (Object.keys(EXERCISE_TYPE_LABEL_KEYS) as ExerciseType[]).map((ty) => ({
+        value: ty,
+        label: t(EXERCISE_TYPE_LABEL_KEYS[ty]),
+      })),
+    [t],
+  );
+  const countryOpts = useMemo(() => countryOptions(activeIntlLocale()), []);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({...f, [key]: value}));
@@ -142,6 +174,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
       height: Number(form.height),
       initialWeight: Number(form.weight),
       goal: form.goal,
+      country: form.country,
       exercise: {
         active: form.exerciseActive,
         frequency: form.exerciseActive ? form.frequency : 'none',
@@ -202,45 +235,52 @@ export function Onboarding({onDone}: {onDone: () => void}) {
         {step === 0 ? (
           <div className="space-y-5">
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Vamos começar</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Primeiro, conta-nos quem és e qual é o teu objetivo. Os dados ficam só no teu
-                dispositivo.
-              </p>
+              <h1 className="text-2xl font-bold text-slate-800">{t('onboarding.title')}</h1>
+              <p className="mt-1 text-sm text-slate-500">{t('onboarding.intro')}</p>
             </div>
 
-            <Field label="Como te chamas?">
+            <Field label={t('onboarding.name')}>
               <TextInput
-                placeholder="O teu nome"
+                placeholder={t('onboarding.namePlaceholder')}
                 value={form.name}
                 onChange={(e) => set('name', e.target.value)}
               />
             </Field>
 
-            <Field label="Sexo">
-              <ChipGroup options={SEX_OPTIONS} value={form.sex} onChange={(v) => set('sex', v)} />
+            <Field label={t('data.sex')}>
+              <ChipGroup options={sexOptions} value={form.sex} onChange={(v) => set('sex', v)} />
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Idade (anos)">
-                <NumberInput value={form.age} onChange={(v) => set('age', v)} placeholder="ex.: 35" />
+              <Field label={t('data.age')}>
+                <NumberInput value={form.age} onChange={(v) => set('age', v)} placeholder={t('onboarding.agePlaceholder')} />
               </Field>
-              <Field label="Altura (cm)">
-                <NumberInput value={form.height} onChange={(v) => set('height', v)} placeholder="ex.: 175" />
+              <Field label={t('data.height')}>
+                <NumberInput value={form.height} onChange={(v) => set('height', v)} placeholder={t('onboarding.heightPlaceholder')} />
               </Field>
             </div>
 
-            <Field label="Peso inicial (kg)">
-              <NumberInput value={form.weight} onChange={(v) => set('weight', v)} placeholder="ex.: 78,5" />
+            <Field label={t('data.initialWeight')}>
+              <NumberInput value={form.weight} onChange={(v) => set('weight', v)} placeholder={t('onboarding.weightPlaceholder')} />
             </Field>
 
-            <Field label="Objetivo">
-              <ChipGroup options={GOAL_OPTIONS} value={form.goal} onChange={(v) => set('goal', v)} />
+            <Field label={t('data.goal')}>
+              <ChipGroup options={goalOptions} value={form.goal} onChange={(v) => set('goal', v)} />
+            </Field>
+
+            <Field label={t('data.country')} hint={t('data.countryHint')}>
+              <Select
+                options={countryOpts}
+                value={form.country}
+                onChange={(e) => set('country', e.target.value as CountryCode)}
+              />
             </Field>
 
             <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">Praticas exercício físico?</span>
+                <span className="text-sm font-medium text-slate-700">
+                  {t('data.exerciseQuestion')}
+                </span>
                 <div className="flex gap-1.5">
                   <button
                     type="button"
@@ -252,7 +292,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                         : 'border border-slate-200 text-slate-500')
                     }
                   >
-                    Não
+                    {t('common.no')}
                   </button>
                   <button
                     type="button"
@@ -267,36 +307,36 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                         : 'border border-slate-200 text-slate-500')
                     }
                   >
-                    Sim
+                    {t('common.yes')}
                   </button>
                 </div>
               </div>
               {form.exerciseActive ? (
                 <div className="space-y-4">
-                  <Field label="Frequência">
+                  <Field label={t('data.frequency')}>
                     <ChipGroup
-                      options={FREQ_OPTIONS.filter((o) => o.value !== 'none')}
+                      options={freqOptions}
                       value={form.frequency}
                       onChange={(v) => set('frequency', v)}
                     />
                   </Field>
-                  <Field label="Intensidade">
+                  <Field label={t('data.intensity')}>
                     <ChipGroup
-                      options={INTENSITY_OPTIONS}
+                      options={intensityOptions}
                       value={form.intensity}
                       onChange={(v) => set('intensity', v)}
                     />
                   </Field>
-                  <Field label="Tipo de treino">
+                  <Field label={t('data.workoutType')}>
                     <Select
-                      options={TYPE_OPTIONS}
+                      options={typeOptions}
                       value={form.type}
                       onChange={(e) => set('type', e.target.value as ExerciseType)}
                     />
                   </Field>
                   <Field
-                    label="Horário do treino"
-                    hint="Serve para marcar as refeições pré-treino e pós-treino no plano."
+                    label={t('data.workoutTime')}
+                    hint={t('data.workoutTimeHint')}
                   >
                     <input
                       type="time"
@@ -307,22 +347,20 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                   </Field>
                 </div>
               ) : (
-                <p className="text-xs text-slate-400">
-                  Sem exercício, o cálculo usa um fator de atividade sedentário.
-                </p>
+                <p className="text-xs text-slate-400">{t('onboarding.sedentaryNote')}</p>
               )}
             </div>
 
             <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
               <Field
-                label="Chave da API Gemini"
-                hint="Necessária para gerar o plano alimentar. Obtém uma chave gratuita em aistudio.google.com/apikey."
+                label={t('onboarding.apiKey')}
+                hint={t('onboarding.apiKeyHint')}
               >
                 <div className="relative">
                   <TextInput
                     type={showKey ? 'text' : 'password'}
                     value={apiKey}
-                    placeholder="Cole a tua chave aqui"
+                    placeholder={t('onboarding.apiKeyPlaceholder')}
                     autoComplete="off"
                     onChange={(e) => setApiKey(e.target.value)}
                     className="pr-20"
@@ -332,7 +370,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                     onClick={() => setShowKey((s) => !s)}
                     className="absolute inset-y-0 right-1.5 my-auto h-8 rounded-lg px-2.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
                   >
-                    {showKey ? 'Ocultar' : 'Mostrar'}
+                    {showKey ? t('common.hide') : t('common.show')}
                   </button>
                 </div>
               </Field>
@@ -343,22 +381,19 @@ export function Onboarding({onDone}: {onDone: () => void}) {
               disabled={!basicValid}
               className="w-full rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700 disabled:opacity-40"
             >
-              Continuar
+              {t('common.continue')}
             </button>
           </div>
         ) : step === 1 ? (
           <div className="space-y-5">
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Dados da balança</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Se já tens uma medição de bioimpedância, regista-a. Este passo é opcional — podes
-                saltá-lo e adicionar os dados mais tarde no separador «Dados».
-              </p>
+              <h1 className="text-2xl font-bold text-slate-800">{t('onboarding.bio.title')}</h1>
+              <p className="mt-1 text-sm text-slate-500">{t('onboarding.bio.intro')}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               {BIO_FIELDS.map((f) => (
-                <Field key={f.key} label={f.label} hint={f.hint}>
+                <Field key={f.key} label={t(f.labelKey)}>
                   <NumberInput
                     value={form.bio[f.key]}
                     onChange={(v) => setBio(f.key, v)}
@@ -374,52 +409,42 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                 onClick={() => setStep(0)}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-600 active:bg-slate-50"
               >
-                Voltar
+                {t('common.back')}
               </button>
               <button
                 onClick={() => setStep(2)}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
               >
-                Continuar
+                {t('common.continue')}
               </button>
             </div>
             <button
               onClick={() => setStep(2)}
               className="w-full text-center text-sm text-slate-400 underline underline-offset-2 hover:text-slate-600"
             >
-              Saltar este passo (opcional)
+              {t('onboarding.bio.skip')}
             </button>
           </div>
         ) : (
           <div className="space-y-5">
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Preferências da dieta</h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Conta-nos o que não queres na tua dieta e deixa observações gerais (por exemplo,
-                indicações do teu nutricionista). Estas preferências entram no plano sempre que
-                gerares uma dieta nova.
-              </p>
+              <h1 className="text-2xl font-bold text-slate-800">{t('onboarding.prefs.title')}</h1>
+              <p className="mt-1 text-sm text-slate-500">{t('onboarding.prefs.intro')}</p>
             </div>
 
-            <Field
-              label="Alimentos a excluir"
-              hint="Escreve os alimentos que nunca queres na dieta (ex.: peixe, cenoura, marisco)."
-            >
+            <Field label={t('diet.excludedFoods')} hint={t('diet.excludedFoodsHint')}>
               <TextArea
                 rows={4}
-                placeholder="ex.: peixe, cenoura, marisco…"
+                placeholder={t('diet.excludedFoodsPlaceholder')}
                 value={form.excludedFoods}
                 onChange={(e) => set('excludedFoods', e.target.value)}
               />
             </Field>
 
-            <Field
-              label="Observações gerais"
-              hint="Condicionantes ou indicações a considerar na dieta (ex.: não ultrapassar 20 g de gordura saturada por dia)."
-            >
+            <Field label={t('diet.observations')} hint={t('diet.observationsHint')}>
               <TextArea
                 rows={6}
-                placeholder="ex.: não ultrapassar 20 g de gordura saturada por dia; potenciar a proteína nas refeições…"
+                placeholder={t('diet.observationsPlaceholder')}
                 value={form.observations}
                 onChange={(e) => set('observations', e.target.value)}
               />
@@ -431,21 +456,21 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                 onClick={() => setStep(1)}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-600 active:bg-slate-50"
               >
-                Voltar
+                {t('common.back')}
               </button>
               <button
                 onClick={commitAndMaybeGenerate}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
               >
                 <SparklesIcon size={16} />
-                Concluir
+                {t('onboarding.finish')}
               </button>
             </div>
             <button
               onClick={commitAndMaybeGenerate}
               className="w-full text-center text-sm text-slate-400 underline underline-offset-2 hover:text-slate-600"
             >
-              Saltar este passo (opcional)
+              {t('onboarding.bio.skip')}
             </button>
           </div>
         )}
@@ -453,10 +478,10 @@ export function Onboarding({onDone}: {onDone: () => void}) {
 
       <ConfirmDialog
         open={askGenerate}
-        title="Gerar o plano agora?"
-        message="Os teus dados foram guardados. Queres que o Nutribio gere o teu plano alimentar semanal com o Gemini agora? (Também podes gerar mais tarde.)"
-        confirmLabel="Sim, gerar plano"
-        cancelLabel="Mais tarde"
+        title={t('onboarding.askGenerate.title')}
+        message={t('onboarding.askGenerate.message')}
+        confirmLabel={t('onboarding.askGenerate.confirm')}
+        cancelLabel={t('onboarding.askGenerate.cancel')}
         busy={generating}
         onConfirm={doGenerate}
         onCancel={skipGenerate}

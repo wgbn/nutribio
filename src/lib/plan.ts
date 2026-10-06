@@ -12,8 +12,7 @@ import type {
   Profile,
   WeekDayId,
 } from '../types';
-import {mealLabel} from './calculations';
-import {MEAL_SLOTS, timeWindowLabel} from './mealTimes';
+import {MEAL_SLOTS, mealLabel, timeWindowLabel} from './mealTimes';
 
 export const SLOT_ORDER: MealSlotId[] = [
   'breakfast',
@@ -74,10 +73,12 @@ export function assemblePlan(
   week: DayPlan[],
   inputsHash: string,
   overview?: string,
+  locale = 'pt-PT',
 ): Plan {
   return {
     generatedAt: Date.now(),
     inputsHash,
+    locale,
     profileSnapshot: profile,
     biometricsSnapshot: bio,
     targets,

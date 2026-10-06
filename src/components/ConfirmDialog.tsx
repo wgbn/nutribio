@@ -1,6 +1,8 @@
 // Modal confirmation dialog (used before regenerating the plan, resets, etc).
 
 import type {ReactNode} from 'react';
+import {useTranslation} from 'react-i18next';
+
 import {XIcon} from './icons';
 
 export interface ConfirmDialogProps {
@@ -19,13 +21,14 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = 'Confirmar',
-  cancelLabel = 'Cancelar',
+  confirmLabel,
+  cancelLabel,
   variant = 'primary',
   busy = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const {t} = useTranslation();
   if (!open) return null;
   const confirmClass =
     variant === 'danger'
@@ -46,7 +49,7 @@ export function ConfirmDialog({
             <button
               onClick={onCancel}
               className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
-              aria-label="Fechar"
+              aria-label={t('common.close')}
             >
               <XIcon size={20} />
             </button>
@@ -59,14 +62,14 @@ export function ConfirmDialog({
             disabled={busy}
             className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 active:bg-slate-50 disabled:opacity-50"
           >
-            {cancelLabel}
+            {cancelLabel ?? t('common.cancel')}
           </button>
           <button
             onClick={onConfirm}
             disabled={busy}
             className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60 ${confirmClass}`}
           >
-            {busy ? 'A gerar…' : confirmLabel}
+            {busy ? t('common.generating') : (confirmLabel ?? t('common.confirm'))}
           </button>
         </div>
       </div>

@@ -2,6 +2,8 @@
 // All data is local and single-device by design (no backend, no sync).
 
 import type {BioRecord, BiometricsState, Plan, Profile, Settings} from '../types';
+import {normalizeLocaleSetting} from '../i18n/locales';
+import {defaultCountryFor, isSupportedCountry} from './countries';
 
 const NAMESPACE = 'nutribio.v1';
 const SCHEMA_VERSION_KEY = `${NAMESPACE}.schemaVersion`;
@@ -35,11 +37,16 @@ function write(key: string, value: unknown) {
 export const loadProfile = (): Profile | null => {
   const p = read<Profile | null>(KEYS.profile, null);
   if (!p) return null;
-  // Normalize profiles saved before excludedFoods/observations/workoutTime existed.
+  // Normalize profiles saved before excludedFoods/observations/workoutTime/
+  // country existed.
   return {
     ...p,
     excludedFoods: p.excludedFoods ?? '',
     observations: p.observations ?? '',
+    // Old profiles have no country: preselect from the device (DECISIONS #26).
+    country: isSupportedCountry(p.country)
+      ? p.country
+      : defaultCountryFor(navigator.languages ?? [navigator.language]),
     exercise: {
       ...p.exercise,
       workoutTime: p.exercise.workoutTime ?? '',
@@ -54,12 +61,24 @@ export const loadBiometrics = (): BiometricsState =>
 
 export const saveBiometrics = (state: BiometricsState) => write(KEYS.biometrics, state);
 
-export const loadPlan = (): Plan | null => read<Plan | null>(KEYS.plan, null);
+/** Load a cached plan; plans generated before the locale field are pt-PT. */
+export const loadPlan = (): Plan | null => {
+  const plan = read<Plan | null>(KEYS.plan, null);
+  if (!plan) return null;
+  return {...plan, locale: plan.locale ?? 'pt-PT'};
+};
 
 export const savePlan = (plan: Plan) => write(KEYS.plan, plan);
 
-export const loadSettings = (): Settings =>
-  read<Settings>(KEYS.settings, {geminiApiKey: '', model: DEFAULT_MODEL});
+export const loadSettings = (): Settings => {
+  const s = read<Partial<Settings>>(KEYS.settings, {});
+  return {
+    geminiApiKey: typeof s.geminiApiKey === 'string' ? s.geminiApiKey : '',
+    model: typeof s.model === 'string' && s.model ? s.model : DEFAULT_MODEL,
+    // Normalize settings saved before the locale setting existed.
+    locale: normalizeLocaleSetting(s.locale),
+  };
+};
 
 export const saveSettings = (settings: Settings) => write(KEYS.settings, settings);
 

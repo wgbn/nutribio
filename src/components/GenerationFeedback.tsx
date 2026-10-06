@@ -2,6 +2,7 @@
 // the Gemini call runs, and a toast when it finishes (success or error).
 
 import {useEffect, useRef, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 
 import {useStore} from '../hooks/useStore';
 import {CheckIcon, LeafIcon, RefreshIcon, XIcon} from './icons';
@@ -20,6 +21,7 @@ export function GenerationFeedback({onViewPlan}: {onViewPlan: () => void}) {
     generatePlan,
     dismissGenerationError,
   } = useStore();
+  const {t} = useTranslation();
 
   const [toast, setToast] = useState<ToastState | null>(null);
   const prevGenerating = useRef(isGenerating);
@@ -30,14 +32,14 @@ export function GenerationFeedback({onViewPlan}: {onViewPlan: () => void}) {
     if (prevGenerating.current && !isGenerating) {
       const planChanged = plan !== null && plan !== prevPlan.current;
       if (planChanged) {
-        setToast({kind: 'success', message: 'Plano gerado com sucesso!'});
+        setToast({kind: 'success', message: t('generation.success')});
       } else if (generationError) {
         setToast({kind: 'error', message: generationError});
       }
     }
     prevGenerating.current = isGenerating;
     prevPlan.current = plan;
-  }, [isGenerating, plan, generationError]);
+  }, [isGenerating, plan, generationError, t]);
 
   // Auto-dismiss the toast after a few seconds.
   useEffect(() => {
@@ -66,14 +68,13 @@ export function GenerationFeedback({onViewPlan}: {onViewPlan: () => void}) {
             </div>
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-slate-800">A gerar o teu plano alimentar…</p>
+            <p className="text-lg font-bold text-slate-800">{t('generation.title')}</p>
             <p className="mt-1 text-sm text-slate-500">
-              {generationStage ?? 'Isto pode demorar 30–60 segundos.'}
+              {generationStage ? t(generationStage) : t('generation.hint')}
             </p>
           </div>
           <p className="max-w-xs text-center text-xs text-slate-400">
-            Mantém a app aberta — quando terminar, o plano fica guardado neste dispositivo e podes
-            vê-lo offline.
+            {t('generation.keepOpen')}
           </p>
         </div>
       ) : null}
@@ -108,7 +109,7 @@ export function GenerationFeedback({onViewPlan}: {onViewPlan: () => void}) {
                     }}
                     className="rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold hover:bg-white/30"
                   >
-                    Ver plano
+                    {t('generation.viewPlan')}
                   </button>
                 ) : (
                   <button
@@ -120,7 +121,7 @@ export function GenerationFeedback({onViewPlan}: {onViewPlan: () => void}) {
                     className="flex items-center gap-1 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold hover:bg-white/30"
                   >
                     <RefreshIcon size={12} />
-                    Tentar de novo
+                    {t('generation.retry')}
                   </button>
                 )}
                 <button
@@ -128,10 +129,10 @@ export function GenerationFeedback({onViewPlan}: {onViewPlan: () => void}) {
                     setToast(null);
                     if (toast.kind === 'error') dismissGenerationError();
                   }}
-                  aria-label="Fechar aviso"
+                  aria-label={t('a11y.closeNotice')}
                   className="rounded-lg px-2 py-1.5 text-xs text-white/70 hover:bg-white/20 hover:text-white"
                 >
-                  Fechar
+                  {t('common.close')}
                 </button>
               </div>
             </div>

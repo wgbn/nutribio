@@ -1,21 +1,24 @@
-// "Data" screen: single form with profile, goal/exercise and bioimpedance.
-// Saving a bioimpedance record adds it to the history (dedupe by date).
-// Saving asks whether to regenerate the plan (confirm dialog).
+// "Data" screen: single form with profile (incl. country), goal/exercise and
+// bioimpedance. Saving a bioimpedance record adds it to the history
+// (dedupe by date). Saving asks whether to regenerate the plan (confirm dialog).
 
 import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useTranslation} from 'react-i18next';
 
 import {ChipGroup, Field, NumberInput, Select, TextInput} from '../components/Field';
 import {ConfirmDialog} from '../components/ConfirmDialog';
 import {CheckIcon, GearIcon, PencilIcon, SparklesIcon, TrashIcon} from '../components/icons';
 import {useStore} from '../hooks/useStore';
+import {activeIntlLocale} from '../i18n/locales';
 import {
   computeTargets,
-  EXERCISE_TYPE_LABELS,
-  FREQUENCY_LABELS,
-  GOAL_LABELS,
-  INTENSITY_LABELS,
-  SEX_LABELS,
+  EXERCISE_TYPE_LABEL_KEYS,
+  FREQUENCY_LABEL_KEYS,
+  GOAL_LABEL_KEYS,
+  INTENSITY_LABEL_KEYS,
+  SEX_LABEL_KEYS,
 } from '../lib/calculations';
+import {countryOptions, type CountryCode} from '../lib/countries';
 import {todayKey} from '../lib/mealTimes';
 import {fmt, fmtDate} from '../lib/units';
 import type {
@@ -27,21 +30,6 @@ import type {
   Profile,
   Sex,
 } from '../types';
-
-const GOAL_OPTIONS = (Object.keys(GOAL_LABELS) as Goal[]).map((g) => ({value: g, label: GOAL_LABELS[g]}));
-const SEX_OPTIONS = (Object.keys(SEX_LABELS) as Sex[]).map((s) => ({value: s, label: SEX_LABELS[s]}));
-const FREQ_OPTIONS = (Object.keys(FREQUENCY_LABELS) as ExerciseFrequency[]).map((f) => ({
-  value: f,
-  label: FREQUENCY_LABELS[f],
-}));
-const INTENSITY_OPTIONS = (Object.keys(INTENSITY_LABELS) as ExerciseIntensity[]).map((i) => ({
-  value: i,
-  label: INTENSITY_LABELS[i],
-}));
-const TYPE_OPTIONS = (Object.keys(EXERCISE_TYPE_LABELS) as ExerciseType[]).map((t) => ({
-  value: t,
-  label: EXERCISE_TYPE_LABELS[t],
-}));
 
 type Num = number | '';
 
@@ -69,6 +57,7 @@ interface FormState {
   height: Num;
   initialWeight: Num;
   goal: Goal;
+  country: CountryCode;
   exerciseActive: boolean;
   frequency: ExerciseFrequency;
   intensity: ExerciseIntensity;
@@ -96,18 +85,18 @@ const BIO_KEYS: BioNumKey[] = [
   'idealWeight',
 ];
 
-const BIO_LABELS: Record<BioNumKey, string> = {
-  weight: 'Peso atual (kg)',
-  bodyFat: 'Gordura corporal (%)',
-  water: 'Água (%)',
-  bmr: 'Metabolismo basal (kcal)',
-  visceralFat: 'Gordura visceral',
-  bmi: 'IMC',
-  muscle: 'Músculo (kg)',
-  protein: 'Proteína (%)',
-  boneMass: 'Massa óssea (kg)',
-  bodyAge: 'Idade corporal',
-  idealWeight: 'Peso ideal (kg)',
+const BIO_LABEL_KEYS: Record<BioNumKey, string> = {
+  weight: 'bio.weight',
+  bodyFat: 'bio.bodyFat',
+  water: 'bio.water',
+  bmr: 'bio.bmr',
+  visceralFat: 'bio.visceralFat',
+  bmi: 'bio.bmi',
+  muscle: 'bio.muscle',
+  protein: 'bio.protein',
+  boneMass: 'bio.boneMass',
+  bodyAge: 'bio.bodyAge',
+  idealWeight: 'bio.idealWeight',
 };
 
 export function EditData({
@@ -118,6 +107,7 @@ export function EditData({
   /** Increment to start a fresh bioimpedance form (used by Progress' CTA). */
   newMeasurementSignal?: number;
 }) {
+  const {t} = useTranslation();
   const {profile, biometrics, targets, saveProfile, saveBioRecord, removeBioRecord, generatePlan} =
     useStore();
   const currentTargets = targets;
@@ -130,6 +120,7 @@ export function EditData({
     height: toNum(profile?.height),
     initialWeight: toNum(profile?.initialWeight),
     goal: profile?.goal ?? 'lose_fat',
+    country: profile?.country ?? 'PT',
     exerciseActive: profile?.exercise.active ?? false,
     frequency: profile?.exercise.frequency ?? 'none',
     intensity: profile?.exercise.intensity ?? 'moderate',
@@ -156,6 +147,39 @@ export function EditData({
   const [notice, setNotice] = useState<string | null>(null);
   const [deleteDate, setDeleteDate] = useState<string | null>(null);
 
+  const goalOptions = useMemo(
+    () => (Object.keys(GOAL_LABEL_KEYS) as Goal[]).map((g) => ({value: g, label: t(GOAL_LABEL_KEYS[g])})),
+    [t],
+  );
+  const sexOptions = useMemo(
+    () => (Object.keys(SEX_LABEL_KEYS) as Sex[]).map((s) => ({value: s, label: t(SEX_LABEL_KEYS[s])})),
+    [t],
+  );
+  const freqOptions = useMemo(
+    () =>
+      (Object.keys(FREQUENCY_LABEL_KEYS) as ExerciseFrequency[])
+        .filter((f) => f !== 'none')
+        .map((f) => ({value: f, label: t(FREQUENCY_LABEL_KEYS[f])})),
+    [t],
+  );
+  const intensityOptions = useMemo(
+    () =>
+      (Object.keys(INTENSITY_LABEL_KEYS) as ExerciseIntensity[]).map((i) => ({
+        value: i,
+        label: t(INTENSITY_LABEL_KEYS[i]),
+      })),
+    [t],
+  );
+  const typeOptions = useMemo(
+    () =>
+      (Object.keys(EXERCISE_TYPE_LABEL_KEYS) as ExerciseType[]).map((ty) => ({
+        value: ty,
+        label: t(EXERCISE_TYPE_LABEL_KEYS[ty]),
+      })),
+    [t],
+  );
+  const countryOpts = useMemo(() => countryOptions(activeIntlLocale()), []);
+
   /** Start a fresh measurement form (empty fields, today's date). */
   const clearBioForm = useCallback(() => {
     setForm((f) => ({
@@ -167,28 +191,31 @@ export function EditData({
   }, []);
 
   /** Load a past record into the form (saving replaces that date). */
-  const loadRecord = useCallback((record: BioRecord) => {
-    setForm((f) => ({
-      ...f,
-      bioDate: record.date,
-      bio: {
-        date: record.date,
-        weight: toNum(record.weight),
-        bodyFat: toNum(record.bodyFat),
-        water: toNum(record.water),
-        bmr: toNum(record.bmr),
-        visceralFat: toNum(record.visceralFat),
-        bmi: toNum(record.bmi),
-        muscle: toNum(record.muscle),
-        protein: toNum(record.protein),
-        boneMass: toNum(record.boneMass),
-        bodyAge: toNum(record.bodyAge),
-        idealWeight: toNum(record.idealWeight),
-      },
-    }));
-    setNotice(`Medição de ${fmtDate(record.date)} carregada — altera e guarda para atualizar essa data.`);
-    window.scrollTo({top: 0, behavior: 'smooth'});
-  }, []);
+  const loadRecord = useCallback(
+    (record: BioRecord) => {
+      setForm((f) => ({
+        ...f,
+        bioDate: record.date,
+        bio: {
+          date: record.date,
+          weight: toNum(record.weight),
+          bodyFat: toNum(record.bodyFat),
+          water: toNum(record.water),
+          bmr: toNum(record.bmr),
+          visceralFat: toNum(record.visceralFat),
+          bmi: toNum(record.bmi),
+          muscle: toNum(record.muscle),
+          protein: toNum(record.protein),
+          boneMass: toNum(record.boneMass),
+          bodyAge: toNum(record.bodyAge),
+          idealWeight: toNum(record.idealWeight),
+        },
+      }));
+      setNotice(t('data.notice.recordLoaded', {date: fmtDate(record.date)}));
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    },
+    [t],
+  );
 
   /** Prefill the form from the latest record (quick update flow). */
   const useLatest = useCallback(() => {
@@ -241,7 +268,7 @@ export function EditData({
 
   const handleSave = () => {
     if (!basicValid) {
-      setNotice('Preenche os campos obrigatórios do perfil antes de guardar.');
+      setNotice(t('data.notice.invalidProfile'));
       return;
     }
     const nextProfile: Profile = {
@@ -251,6 +278,7 @@ export function EditData({
       height: Number(form.height),
       initialWeight: Number(form.initialWeight),
       goal: form.goal,
+      country: form.country,
       exercise: {
         active: form.exerciseActive,
         frequency: form.exerciseActive ? form.frequency : 'none',
@@ -285,7 +313,7 @@ export function EditData({
 
   const skipGenerate = () => {
     setAskGenerate(false);
-    setNotice('Dados guardados. O plano atual mantém-se.');
+    setNotice(t('data.notice.savedKeep'));
   };
 
   return (
@@ -295,14 +323,12 @@ export function EditData({
         style={{paddingTop: 'env(safe-area-inset-top)'}}
       >
         <div>
-          <h1 className="text-xl font-bold text-slate-800">Os teus dados</h1>
-          <p className="text-sm text-slate-400">
-            Guarda tudo num só sítio. Tudo fica apenas neste dispositivo.
-          </p>
+          <h1 className="text-xl font-bold text-slate-800">{t('data.title')}</h1>
+          <p className="text-sm text-slate-400">{t('data.subtitle')}</p>
         </div>
         <button
           onClick={onOpenSettings}
-          aria-label="Definições"
+          aria-label={t('common.settings')}
           className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
         >
           <GearIcon size={22} />
@@ -313,7 +339,11 @@ export function EditData({
         <div className="mt-3 flex items-start gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           <CheckIcon size={16} className="mt-0.5 shrink-0" />
           <span>{notice}</span>
-          <button onClick={() => setNotice(null)} className="ml-auto text-emerald-500" aria-label="Fechar">
+          <button
+            onClick={() => setNotice(null)}
+            className="ml-auto text-emerald-500"
+            aria-label={t('common.close')}
+          >
             ✕
           </button>
         </div>
@@ -323,61 +353,62 @@ export function EditData({
       {/* Calculation summary */}
       {previewTargets ? (
         <section className="mb-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:col-span-2 md:mb-0">
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Resumo dos cálculos</h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-700">{t('data.calcSummary')}</h2>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <div>
-              <dt className="text-xs text-slate-400">TMB Mifflin-St Jeor</dt>
+              <dt className="text-xs text-slate-400">{t('data.bmrMifflin')}</dt>
               <dd className="font-semibold tabular-nums text-slate-800">
                 {fmt(previewTargets.bmrMifflin, 0)} kcal
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-400">TMB Harris-Benedict</dt>
+              <dt className="text-xs text-slate-400">{t('data.bmrHarris')}</dt>
               <dd className="font-semibold tabular-nums text-slate-800">
                 {fmt(previewTargets.bmrHarrisBenedict, 0)} kcal
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-400">Gasto total diário (TDEE)</dt>
+              <dt className="text-xs text-slate-400">{t('data.tdee')}</dt>
               <dd className="font-semibold tabular-nums text-slate-800">
                 {fmt(previewTargets.tdee, 0)} kcal
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-400">Faixa calórica ({GOAL_LABELS[form.goal]})</dt>
+              <dt className="text-xs text-slate-400">
+                {t('data.calorieRange', {goal: t(GOAL_LABEL_KEYS[form.goal])})}
+              </dt>
               <dd className="font-semibold tabular-nums text-slate-800">
                 {fmt(previewTargets.calorieMin, 0)}–{fmt(previewTargets.calorieMax, 0)} kcal
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-400">Proteína</dt>
+              <dt className="text-xs text-slate-400">{t('data.protein')}</dt>
               <dd className="font-semibold tabular-nums text-slate-800">
                 {fmt(previewTargets.proteinG, 0)} g
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-400">Hidratos</dt>
+              <dt className="text-xs text-slate-400">{t('data.carbs')}</dt>
               <dd className="font-semibold tabular-nums text-slate-800">
                 {fmt(previewTargets.carbsG, 0)} g
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-400">Gordura</dt>
+              <dt className="text-xs text-slate-400">{t('data.fat')}</dt>
               <dd className="font-semibold tabular-nums text-slate-800">
                 {fmt(previewTargets.fatG, 0)} g
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-slate-400">Gordura saturada (máx.)</dt>
+              <dt className="text-xs text-slate-400">{t('data.satFatMax')}</dt>
               <dd className="font-semibold tabular-nums text-slate-800">
-                &lt; {fmt(previewTargets.saturatedFatLimitG, 0)} g
+                {'< '}{fmt(previewTargets.saturatedFatLimitG, 0)} g
               </dd>
             </div>
           </dl>
           {currentTargets ? (
             <p className="mt-3 border-t border-slate-50 pt-2 text-[11px] text-slate-400">
-              Plano atual gerado para {fmt(currentTargets.calorieTarget, 0)} kcal/dia. Estes valores
-              passam a valer quando gerares um novo plano.
+              {t('data.currentPlanNote', {kcal: fmt(currentTargets.calorieTarget, 0)})}
             </p>
           ) : null}
         </section>
@@ -385,34 +416,41 @@ export function EditData({
 
       {/* Profile form */}
       <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:mt-0">
-        <h2 className="text-sm font-semibold text-slate-700">Perfil</h2>
-        <Field label="Nome">
+        <h2 className="text-sm font-semibold text-slate-700">{t('data.profile')}</h2>
+        <Field label={t('data.name')}>
           <TextInput value={form.name} onChange={(e) => set('name', e.target.value)} />
         </Field>
-        <Field label="Sexo">
-          <ChipGroup options={SEX_OPTIONS} value={form.sex} onChange={(v) => set('sex', v)} />
+        <Field label={t('data.sex')}>
+          <ChipGroup options={sexOptions} value={form.sex} onChange={(v) => set('sex', v)} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Idade (anos)">
+          <Field label={t('data.age')}>
             <NumberInput value={form.age} onChange={(v) => set('age', v)} />
           </Field>
-          <Field label="Altura (cm)">
+          <Field label={t('data.height')}>
             <NumberInput value={form.height} onChange={(v) => set('height', v)} />
           </Field>
         </div>
-        <Field label="Peso inicial (kg)" hint="Usado como referência quando não há medição recente.">
+        <Field label={t('data.initialWeight')} hint={t('data.initialWeightHint')}>
           <NumberInput value={form.initialWeight} onChange={(v) => set('initialWeight', v)} />
+        </Field>
+        <Field label={t('data.country')} hint={t('data.countryHint')}>
+          <Select
+            options={countryOpts}
+            value={form.country}
+            onChange={(e) => set('country', e.target.value as CountryCode)}
+          />
         </Field>
       </section>
 
       {/* Goal + exercise */}
       <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:mt-0">
-        <h2 className="text-sm font-semibold text-slate-700">Objetivo e exercício</h2>
-        <Field label="Objetivo">
-          <ChipGroup options={GOAL_OPTIONS} value={form.goal} onChange={(v) => set('goal', v)} />
+        <h2 className="text-sm font-semibold text-slate-700">{t('data.goalExercise')}</h2>
+        <Field label={t('data.goal')}>
+          <ChipGroup options={goalOptions} value={form.goal} onChange={(v) => set('goal', v)} />
         </Field>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-slate-700">Praticas exercício físico?</span>
+          <span className="text-sm font-medium text-slate-700">{t('data.exerciseQuestion')}</span>
           <div className="flex gap-1.5">
             <button
               type="button"
@@ -424,7 +462,7 @@ export function EditData({
                   : 'border border-slate-200 text-slate-500')
               }
             >
-              Não
+              {t('common.no')}
             </button>
             <button
               type="button"
@@ -436,37 +474,34 @@ export function EditData({
                   : 'border border-slate-200 text-slate-500')
               }
             >
-              Sim
+              {t('common.yes')}
             </button>
           </div>
         </div>
         {form.exerciseActive ? (
           <>
-            <Field label="Frequência">
+            <Field label={t('data.frequency')}>
               <ChipGroup
-                options={FREQ_OPTIONS.filter((o) => o.value !== 'none')}
+                options={freqOptions}
                 value={form.frequency}
                 onChange={(v) => set('frequency', v)}
               />
             </Field>
-            <Field label="Intensidade">
+            <Field label={t('data.intensity')}>
               <ChipGroup
-                options={INTENSITY_OPTIONS}
+                options={intensityOptions}
                 value={form.intensity}
                 onChange={(v) => set('intensity', v)}
               />
             </Field>
-            <Field label="Tipo de treino">
+            <Field label={t('data.workoutType')}>
               <Select
-                options={TYPE_OPTIONS}
+                options={typeOptions}
                 value={form.type}
                 onChange={(e) => set('type', e.target.value as ExerciseType)}
               />
             </Field>
-            <Field
-              label="Horário do treino"
-              hint="Serve para marcar as refeições pré-treino e pós-treino no plano."
-            >
+            <Field label={t('data.workoutTime')} hint={t('data.workoutTimeHint')}>
               <input
                 type="time"
                 value={form.workoutTime}
@@ -482,11 +517,8 @@ export function EditData({
       <section className="mt-4 space-y-4 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:col-span-2 md:mt-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="text-sm font-semibold text-slate-700">Bioimpedância</h2>
-            <p className="mt-0.5 text-xs text-slate-400">
-              Ao guardar, a medição é adicionada ao histórico com a data escolhida. Se a data já
-              estiver registada, essa medição é substituída.
-            </p>
+            <h2 className="text-sm font-semibold text-slate-700">{t('data.bioimpedance')}</h2>
+            <p className="mt-0.5 text-xs text-slate-400">{t('data.bioHint')}</p>
           </div>
           <div className="flex gap-1.5">
             <button
@@ -494,18 +526,18 @@ export function EditData({
               onClick={clearBioForm}
               className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-emerald-300"
             >
-              Nova medição
+              {t('data.newMeasurement')}
             </button>
             <button
               type="button"
               onClick={useLatest}
               className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-emerald-300"
             >
-              Usar última medição
+              {t('data.useLatest')}
             </button>
           </div>
         </div>
-        <Field label="Data da medição">
+        <Field label={t('data.measurementDate')}>
           <input
             type="date"
             value={form.bioDate}
@@ -515,7 +547,7 @@ export function EditData({
         </Field>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {BIO_KEYS.map((k) => (
-            <Field key={k} label={BIO_LABELS[k]}>
+            <Field key={k} label={t(BIO_LABEL_KEYS[k])}>
               <NumberInput value={form.bio[k]} onChange={(v) => setBio(k, v)} placeholder="—" />
             </Field>
           ))}
@@ -525,7 +557,7 @@ export function EditData({
         {biometrics.history.length > 0 ? (
           <div className="border-t border-slate-100 pt-4">
             <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Medições registadas ({biometrics.history.length})
+              {t('data.recordedMeasurements', {count: biometrics.history.length})}
             </h3>
             <div className="space-y-2">
               {[...biometrics.history].reverse().map((r) => (
@@ -537,22 +569,22 @@ export function EditData({
                     <p className="text-sm font-medium text-slate-700">{fmtDate(r.date)}</p>
                     <p className="truncate text-xs text-slate-400">
                       {r.weight !== undefined ? `${fmt(r.weight, 1)} kg` : ''}
-                      {r.bodyFat !== undefined ? ` · ${fmt(r.bodyFat, 1)}% gordura` : ''}
-                      {r.bmi !== undefined ? ` · IMC ${fmt(r.bmi, 1)}` : ''}
-                      {r.muscle !== undefined ? ` · ${fmt(r.muscle, 1)} kg músculo` : ''}
+                      {r.bodyFat !== undefined ? ` · ${fmt(r.bodyFat, 1)}% ${t('metric.bodyFat')}` : ''}
+                      {r.bmi !== undefined ? ` · ${t('metric.bmi')} ${fmt(r.bmi, 1)}` : ''}
+                      {r.muscle !== undefined ? ` · ${fmt(r.muscle, 1)} kg ${t('metric.muscle')}` : ''}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-1.5">
                     <button
                       onClick={() => loadRecord(r)}
-                      aria-label={`Editar medição de ${fmtDate(r.date)}`}
+                      aria-label={t('data.editMeasurement', {date: fmtDate(r.date)})}
                       className="rounded-lg p-2 text-slate-500 hover:bg-white hover:text-emerald-600"
                     >
                       <PencilIcon size={16} />
                     </button>
                     <button
                       onClick={() => setDeleteDate(r.date)}
-                      aria-label={`Apagar medição de ${fmtDate(r.date)}`}
+                      aria-label={t('data.deleteMeasurement', {date: fmtDate(r.date)})}
                       className="rounded-lg p-2 text-slate-500 hover:bg-white hover:text-rose-600"
                     >
                       <TrashIcon size={16} />
@@ -564,7 +596,7 @@ export function EditData({
           </div>
         ) : (
           <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-400">
-            Ainda não registaste nenhuma medição de bioimpedância.
+            {t('data.noMeasurements')}
           </p>
         )}
       </section>
@@ -576,46 +608,39 @@ export function EditData({
           className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700"
         >
           <SparklesIcon size={16} />
-          Guardar
+          {t('common.save')}
         </button>
-        <p className="mt-2 text-center text-xs text-slate-400">
-          Ao guardar, podes optar por gerar um novo plano alimentar.
-        </p>
+        <p className="mt-2 text-center text-xs text-slate-400">{t('data.saveNote')}</p>
       </div>
 
       <ConfirmDialog
         open={askGenerate}
-        title="Gerar novo plano agora?"
+        title={t('data.askGenerate.title')}
         message={
           <>
-            Os teus dados foram guardados. Queres gerar um novo plano alimentar semanal com o Gemini
-            com base nos dados atualizados?
+            {t('data.askGenerate.body')}
             <span className="mt-2 block text-xs text-slate-400">
-              Se preferires, o plano atual mantém-se até gerares um novo.
+              {t('data.askGenerate.note')}
             </span>
           </>
         }
-        confirmLabel="Sim, gerar plano"
-        cancelLabel="Só guardar"
+        confirmLabel={t('data.askGenerate.confirm')}
+        cancelLabel={t('data.askGenerate.cancel')}
         onConfirm={doGenerate}
         onCancel={skipGenerate}
       />
 
       <ConfirmDialog
         open={deleteDate !== null}
-        title="Apagar esta medição?"
-        message={
-          deleteDate
-            ? `A medição de ${fmtDate(deleteDate)} será removida do histórico. O plano atual não é alterado.`
-            : ''
-        }
-        confirmLabel="Apagar"
-        cancelLabel="Cancelar"
+        title={t('data.deleteAsk.title')}
+        message={deleteDate ? t('data.deleteAsk.message', {date: fmtDate(deleteDate)}) : ''}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
         variant="danger"
         onConfirm={() => {
           if (deleteDate) {
             removeBioRecord(deleteDate);
-            setNotice('Medição apagada do histórico.');
+            setNotice(t('data.notice.deleted'));
           }
           setDeleteDate(null);
         }}

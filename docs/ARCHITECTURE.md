@@ -38,8 +38,9 @@ There is **no backend and no database**. All data lives in `localStorage`
 | Charts | chart.js + react-chartjs-2 |
 | PWA | `vite-plugin-pwa` (generateSW, autoUpdate) |
 | Icons (PNG) | Python + PIL script (`scripts/generate_icons.py`) |
+| i18n | `i18next` + `react-i18next` (26.x) — lazy per-locale catalogs |
 | Deployment | GitHub Pages project site (`/nutribio/`) via GitHub Actions |
-| UI language | pt-PT · Code language: English |
+| UI language | 7 locales: `pt-PT`, `pt-BR`, `en-GB` (fallback), `es`, `fr`, `de`, `it` · Code language: English |
 
 ## 3. Project structure
 
@@ -56,19 +57,24 @@ nutribio/
 ├── public/icons/                # icon-192/512.png, maskable-512.png
 ├── scripts/generate_icons.py    # PWA icon generator (PIL)
 └── src/
-    ├── main.tsx                 # React root + SW registration + schema check
+    ├── main.tsx                 # React root + SW registration + schema check + i18n init
     ├── App.tsx                  # onboarding gate, tab/sidebar routing, settings overlay
     ├── index.css                # Tailwind v4 theme + global styles
     ├── types.ts                 # all domain types
+    ├── i18n/
+    │   ├── locales.ts           # locale list, resolveLocale (device language), active locale
+    │   ├── index.ts             # i18next runtime (lazy catalogs, changeLocale via re-init)
+    │   └── catalogs/            # en-GB (source), pt-PT, pt-BR, es, fr, de, it (TS modules)
     ├── lib/
-    │   ├── calculations.ts      # BMR/TDEE/targets/meal split + labels
+    │   ├── calculations.ts      # BMR/TDEE/targets/meal split + label KEYS
+    │   ├── countries.ts         # SUPPORTED_COUNTRIES + name/preselection helpers
     │   ├── storage.ts           # localStorage keys, defaults, bio merge/remove
-    │   ├── gemini.ts            # prompt builder + generateWeeklyPlan + normalizeWeek
+    │   ├── gemini.ts            # prompt builder (English) + generateWeeklyPlan + normalizeWeek
     │   ├── models.ts            # live model listing (ai.models.list)
     │   ├── plan.ts              # assemblePlan, SLOT_ORDER/WEEK_ORDER, totals
-    │   ├── mealTimes.ts         # 5 meal slots, time windows, next-meal helpers
+    │   ├── mealTimes.ts         # 5 meal slots, time windows, next-meal helpers (label KEYS)
     │   ├── hash.ts              # FNV-1a
-    │   └── units.ts             # pt-PT number/date formatting
+    │   └── units.ts             # locale-aware number/date formatting
     ├── hooks/
     │   ├── useStore.tsx         # global store + persistence + generatePlan
     │   └── useInstallPrompt.ts  # beforeinstallprompt + standalone detection
@@ -106,6 +112,7 @@ interface Profile {
   height: number;        // cm
   initialWeight: number; // kg
   goal: 'maintain' | 'lose_fat' | 'lose_weight' | 'gain_mass';
+  country: CountryCode;  // ISO alpha-2 from SUPPORTED_COUNTRIES (lib/countries.ts)
   exercise: {
     active: boolean;
     frequency: 'none' | '1_2' | '3_4' | '5_6' | '7';   // sessions/week
@@ -119,9 +126,10 @@ interface Profile {
 }
 ```
 `loadProfile()` normalizes profiles saved before
-`excludedFoods`/`observations`/`workoutTime` existed (fills `''`). Any code
-that writes a profile must carry `excludedFoods`/`observations` through (see
-DECISIONS #11) and set `workoutTime` (see DECISIONS #18).
+`excludedFoods`/`observations`/`workoutTime`/`country` existed (fills `''`;
+country is preselected from the device region/locale). Any code
+that writes a profile must carry `excludedFoods`/`observations`/`country`
+through (see DECISIONS #11, #26) and set `workoutTime` (see DECISIONS #18).
 
 ### Biometrics
 ```ts
@@ -140,7 +148,8 @@ interface BiometricsState { latest: BioRecord | null; history: BioRecord[]; }
 ```ts
 interface Plan {
   generatedAt: number;
-  inputsHash: string;            // FNV-1a of {profile, latest} — cache key
+  inputsHash: string;            // FNV-1a of {profile, latest, locale} — cache key
+  locale: string;                // locale the plan content was generated in
   profileSnapshot: Profile;
   biometricsSnapshot: BioRecord | null;
   targets: NutritionTargets;     // see §5
@@ -164,7 +173,11 @@ interface Dish {
 
 ### Settings
 ```ts
-interface Settings { geminiApiKey: string; model: string; }
+interface Settings {
+  geminiApiKey: string;
+  model: string;
+  locale: 'auto' | Locale;  // app language; 'auto' follows the device
+}
 ```
 Defaults: `model = 'gemini-2.5-flash'`; `MODEL_OPTIONS` (static fallback):
 `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-3-flash-preview`,
@@ -193,39 +206,48 @@ All numbers are computed locally; the Gemini prompt receives them.
   afternoon snack 15 · dinner 25. Per-meal gram targets are passed to Gemini.
 - **Effective weight**: latest bioimpedance weight, else `profile.initialWeight`.
 
-Labels used in the UI live here too (`GOAL_LABELS`, `SEX_LABELS`,
-`FREQUENCY_LABELS`, `INTENSITY_LABELS`, `EXERCISE_TYPE_LABELS`).
+Labels used in the UI are i18n **keys** here (`GOAL_LABEL_KEYS`,
+`SEX_LABEL_KEYS`, `FREQUENCY_LABEL_KEYS`, `INTENSITY_LABEL_KEYS`,
+`EXERCISE_TYPE_LABEL_KEYS`) — translated at render / prompt build time.
 
 ## 6. Gemini integration (`src/lib/gemini.ts`)
 
 ### Flow (`useStore.generatePlan` → lazy `import('../lib/gemini')`)
 1. Guard: profile + targets exist.
-2. Compute `inputsHash` (FNV-1a over `{profile, biometrics.latest}`).
+2. Compute `inputsHash` (FNV-1a over `{profile, biometrics.latest, locale}`).
 3. `generateWeeklyPlan({apiKey, model, profile, bio, targets, weightKg})`:
    - builds the prompt (`buildPrompt`, exported for testing);
    - calls `ai.models.generateContent` with
      `responseMimeType: 'application/json'` + `responseJsonSchema` (structured
      output), `temperature: 0.7`, `maxOutputTokens: 65536`;
-   - up to **2 attempts**;
+   - up to **2 attempts** (stage keys `generation.stage.generating` /
+     `generation.stage.retrying`, translated by the UI);
    - `extractJson` handles plain JSON / fenced code blocks / first `{…}` span;
    - `normalizeWeek` validates and maps the response into `DayPlan[]`
      (drops unknown days/slots, keeps max 4 variations, fills missing slots
-     with empty variations, throws `GeminiError` if nothing usable).
-4. `assemblePlan(...)` builds and stores the `Plan` with `generatedAt`,
-   `inputsHash`, snapshots, targets and the Gemini `overview`.
+     with empty variations, throws `GeminiError` if nothing usable);
+   - returns `{week, overview, locale}` (the active locale the content was
+     generated in).
+4. `assemblePlan(..., locale)` builds and stores the `Plan` with
+   `generatedAt`, `inputsHash`, `locale`, snapshots, targets and the Gemini
+   `overview`.
 
-### Prompt structure (PT-PT)
-`Perfil do utilizador` → `Dados de bioimpedância (última medição)` →
-`Cálculos (já feitos — usa estes valores, não recalculas)` →
-`Distribuição calórica por refeição` → **`## Treino`** (only when the user is
-active and has a workout time: the time + "Refeição pré-treino: {label} —
-reforça hidratos de digestão moderada e proteína" + "Refeição pós-treino:
-{label} — reforça proteína e hidratos para recuperação") →
-**`Restrições e preferências do utilizador`** (only when non-empty: excluded
-foods — "NUNCA incluir estes alimentos em nenhum prato"; observations —
-"considera estas indicações") → `Regras obrigatórias` (11 rules, incl. rule
-11: respect exclusions and observations) → "Devolve APENAS o JSON no schema
-indicado."
+### Prompt structure (English instructions, localized output — DECISIONS #25/#26)
+The instructions and JSON-schema descriptions are written in **English**
+(most reliable across models). Sections: user profile (sex/age/height/weight/
+goal/exercise — labels resolved in the active locale; the **name is NOT sent**,
+minimization per DECISIONS #29) → **country of residence** ("The user lives in
+{Country}… prioritize ingredients typical of / commonly found in supermarkets
+in {Country}" + `COUNTRY_CUISINE_HINTS[country]`) → bioimpedance (latest) →
+`Calculations (already done — use these values, do NOT recalculate)` →
+`Calorie distribution per meal` → `## Workout` (only when active + time set:
+workout time + pre/post-workout meal labels) → `User restrictions and
+preferences` (only when non-empty: excluded foods — "NEVER include any of
+these foods in any dish"; observations) → **`Output language (MANDATORY)`**
+("Write ALL human-readable content … in {LanguageName} ({locale}). Food and
+product names must be the ones a shopper finds in {Country}") → `Mandatory
+rules` (11 rules; rules 4–5 prefer country-typical protein sources and staple
+carbs) → "Return ONLY the JSON in the given schema."
 
 ### Workout time & pre/post-workout meals (`src/lib/mealTimes.ts`)
 - `parseTimeToMinutes("HH:MM") → number | null`.
@@ -234,7 +256,8 @@ indicado."
   (night), the last slot that ended before it; null if none. `postId` = the
   next slot after `preId`; if `preId` is null (workout before breakfast), the
   first meal of the day; null if there is no next slot.
-- `workoutBadgeFor(mealId, workoutMeals) → 'Pré-treino' | 'Pós-treino' | null`.
+- `workoutBadgeFor(mealId, workoutMeals) → 'pre' | 'post' | null` (translated
+  at render via `badge.pre` / `badge.post`).
 - The store derives `workoutMeals` from `profile.exercise` (only when active +
   valid time). MealCard/Today/Plan render the badges; the prompt receives the
   same derivation. Changing the time invalidates the plan hash (DECISIONS #18).
@@ -243,18 +266,47 @@ indicado."
 Top level `{ overview?: string, week: DayPlan[] }`; each day `{ day, meals }`;
 each meal `{ slot, variations: 3× Dish }`; dish `{ name, description?,
 ingredients[{item, amountGrams, unit?}], macros{kcal,protein,carbs,fat},
-notes? }`. `normalizeWeek` accepts 3–4 variations defensively.
+notes? }`. `normalizeWeek` accepts 3–4 variations defensively. All schema
+descriptions are in English and instruct the model to write content in the
+required output language.
 
 ### Errors
 `GeminiError` for: missing key, empty response, unparseable JSON, empty plan,
-repeated failures. The store surfaces `generationError` to the UI. Real API
-errors are NOT swallowed: `describeError()` (`src/lib/errors.ts`) extracts a
-readable message from the SDK's errors (including the embedded API JSON body,
-e.g. "400 INVALID_ARGUMENT: API key not valid"), and `generateWeeklyPlan`
-rethrows `GeminiError('A geração do plano falhou: ' + detail)` so the global
-toast shows the cause. The Settings model-list status line shows the real
-error too, and falls back to the static list when the API returns nothing
-compatible (DECISIONS #20).
+repeated failures — messages are localized via i18n keys (`errors.*`) at throw
+time. The store surfaces `generationError` to the UI. Real API errors are NOT
+swallowed: `describeError()` (`src/lib/errors.ts`) extracts a readable message
+from the SDK's errors (including the embedded API JSON body, e.g. "400
+INVALID_ARGUMENT: API key not valid"), and `generateWeeklyPlan` rethrows
+`GeminiError(t('errors.apiFailed', {detail}))` so the global toast shows the
+cause. The Settings model-list status line shows the real error too, and
+falls back to the static list when the API returns nothing compatible
+(DECISIONS #20).
+
+### i18n runtime (`src/i18n/`)
+- Locales: `pt-PT`, `pt-BR`, `en-GB` (fallback), `es`, `fr`, `de`, `it`.
+  `resolveLocale(navigator.languages)`: `pt-BR`→pt-BR, any other `pt-*`→pt-PT,
+  `en-*`→en-GB, es/fr/de/it match, else en-GB. Override stored in
+  `settings.locale` (`'auto' | Locale`).
+- Catalogs: TS modules in `src/i18n/catalogs/` (252 keys each); en-GB is the
+  source of truth and is statically imported; the other six are lazy chunks.
+- i18next v26 registers resources only via `init({resources})` (no
+  `addResourceBundle`), so `changeLocale` loads the catalog and **re-runs
+  init** with all loaded catalogs, then `changeLanguage` (DECISIONS #31).
+- `main.tsx` awaits `initI18n(loadSettings().locale)` before the first render;
+  `<html lang>` follows the active locale; `units.ts` and `NumberInput` use
+  the active locale's decimal separator (input still accepts comma or dot).
+- `npm run i18n:check` (`scripts/check_i18n.mjs`, esbuild-based) enforces key
+  parity + interpolation placeholders across all 7 catalogs; chained into
+  `npm run build`.
+
+### Countries (`src/lib/countries.ts`)
+`SUPPORTED_COUNTRIES = [PT, BR, ES, FR, DE, IT, NL, BE, IE, AT, LU, GB]`
+(curated list, DECISIONS #26). `Profile.country` is required — collected in
+onboarding step 1, editable in Dados, carried through every profile write;
+old profiles are normalized (preselected from device region / app locale via
+`defaultCountryFor`). Names via `Intl.DisplayNames` in the active locale.
+The country drives the prompt cuisine hints (now) and will drive Stripe
+currency (item 3) and legal regime (item 5).
 
 ## 7. Live model listing (`src/lib/models.ts`)
 
@@ -277,8 +329,10 @@ effects. Derived: `targets` (recomputed from profile + latest weight),
 
 Actions: `saveProfile` (bumps `updatedAt`), `saveBioRecord`,
 `removeBioRecord`, `saveSettings`, `setSelectedVariation(day, slot, index)`,
-`generatePlan()` (async; returns boolean; lazy-loads the SDK),
-`dismissGenerationError`, `resetAll` (clears localStorage).
+`generatePlan()` (async; returns boolean; lazy-loads the SDK; stores the plan
+with its locale), `dismissGenerationError`, `resetAll` (clears localStorage
+but **keeps the language preference** — a device setting, not personal data).
+The inputs hash includes the **active locale** (language change → stale plan).
 
 ## 9. Screens & flows
 
@@ -295,10 +349,11 @@ Actions: `saveProfile` (bumps `updatedAt`), `saveBioRecord`,
 
 ### Onboarding (`screens/Onboarding.tsx`) — 3 steps
 1. **Dados básicos**: name, sex (chips), age/height/initial weight (number
-   inputs), goal (chips), exercise toggle (frequency/intensity/type + workout
-   time `<input type="time">` when active), and the optional Gemini API key
-   field (password + show/hide; saved to `settings` on commit). "Continuar"
-   requires `basicValid`.
+   inputs), goal (chips), **country (select, preselected from the device)**,
+   exercise toggle (frequency/intensity/type + workout time `<input
+   type="time">` when active), and the optional Gemini API key field (password
+   + show/hide; saved to `settings` on commit). "Continuar" requires
+   `basicValid`.
 2. **Dados da balança** (optional): 11 bioimpedance fields; "Saltar este
    passo (opcional)" or "Continuar".
 3. **Preferências da dieta**: two textareas (`excludedFoods`,
@@ -339,7 +394,8 @@ Actions: `saveProfile` (bumps `updatedAt`), `saveBioRecord`,
 ### EditData / "Dados" (`screens/EditData.tsx`)
 - **Resumo dos cálculos** (live): both BMRs, TDEE, goal calorie range,
   protein/carbs/fat/saturated — recomputed from the form on every change.
-- **Perfil**: name, sex, age, height, initial weight.
+- **Perfil**: name, sex, age, height, initial weight, country (select; must
+  be carried through on every profile write).
 - **Objetivo e exercício**: goal chips + exercise toggle/frequency/intensity/
   type + workout time (time input; drives the pré/pós-treino badges).
 - **Bioimpedância**: date + 11 fields (prefilled from latest); "Nova medição"
@@ -352,6 +408,8 @@ Actions: `saveProfile` (bumps `updatedAt`), `saveBioRecord`,
   3 columns.
 
 ### Settings (`screens/Settings.tsx`)
+- **Idioma**: language select (`auto` = device language, or one of the 7
+  locales); switches immediately and persists to `settings.locale`.
 - **Gemini**: API key (password + show/hide, saved per keystroke to
   localStorage), model `<select>` populated live from `models.ts` (see §7)
   with status line + "Atualizar" button, "(personalizado)" entry only if the
@@ -422,8 +480,9 @@ The site is deployed as a GitHub Pages **project site** at
 
 ## 13. Testing & verification
 
-- `npm run build` — strict TS + production build; also check the chunk layout
-  (the Gemini SDK must stay out of the main bundle).
+- `npm run build` — i18n parity check + strict TS + production build; also
+  check the chunk layout (the Gemini SDK and the 6 lazy catalogs must stay
+  out of the main bundle).
 - Pure-logic tests: bundle a scratch entry with
   `npx esbuild <file> --bundle --format=cjs --platform=node` and run with
   node (used previously for `normalizeWeek`, `computeTargets`, `filterModels`,

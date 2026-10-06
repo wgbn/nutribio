@@ -1,5 +1,8 @@
 // Core domain types for Nutribio.
 
+import type {LocaleSetting} from './i18n/locales';
+import type {CountryCode} from './lib/countries';
+
 export type Sex = 'male' | 'female';
 
 export type Goal = 'maintain' | 'lose_fat' | 'lose_weight' | 'gain_mass';
@@ -24,6 +27,8 @@ export interface Profile {
   height: number; // cm
   initialWeight: number; // kg
   goal: Goal;
+  /** Country of residence — drives cuisine hints (DECISIONS #26). */
+  country: CountryCode;
   exercise: Exercise;
   /** Foods the user never wants in the diet (free text, one per line/comma). */
   excludedFoods: string;
@@ -138,6 +143,8 @@ export interface NutritionTargets {
 export interface Plan {
   generatedAt: number;
   inputsHash: string;
+  /** Locale the plan content was generated in (dishes are in this language). */
+  locale?: string;
   profileSnapshot: Profile;
   biometricsSnapshot: BioRecord | null;
   targets: NutritionTargets;
@@ -148,6 +155,8 @@ export interface Plan {
 export interface Settings {
   geminiApiKey: string;
   model: string;
+  /** App language: 'auto' (device language) or a specific locale. */
+  locale: LocaleSetting;
 }
 
 export type TabId = 'today' | 'plan' | 'progress' | 'data';

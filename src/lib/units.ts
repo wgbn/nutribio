@@ -1,10 +1,14 @@
-// Formatting helpers (pt-PT conventions: comma decimal separator).
+// Formatting helpers, localized to the active locale (comma decimals for
+// pt-* locales, dot for en/es/fr/de/it — the app locale decides).
+// NumberInput still accepts both separators (DECISIONS #9).
 
-const nf = new Intl.NumberFormat('pt-PT', {maximumFractionDigits: 1});
+import {activeIntlLocale} from '../i18n/locales';
+
+const nf = new Intl.NumberFormat(activeIntlLocale(), {maximumFractionDigits: 1});
 
 export function fmt(value: number | undefined | null, digits = 0): string {
   if (value === undefined || value === null || Number.isNaN(value)) return '—';
-  return new Intl.NumberFormat('pt-PT', {
+  return new Intl.NumberFormat(activeIntlLocale(), {
     maximumFractionDigits: digits,
     minimumFractionDigits: 0,
   }).format(value);
@@ -21,17 +25,23 @@ export function fmtGrams(value: number | undefined | null): string {
 export function fmtDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('pt-PT', {day: '2-digit', month: 'short', year: 'numeric'});
+  return date.toLocaleDateString(activeIntlLocale(), {day: '2-digit', month: 'short', year: 'numeric'});
 }
 
 export function fmtDateTime(epochMs: number): string {
-  return new Date(epochMs).toLocaleString('pt-PT', {
+  return new Date(epochMs).toLocaleString(activeIntlLocale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   });
+}
+
+/** Decimal separator for the active locale ("," for pt-*, "." for others). */
+export function decimalSeparator(): string {
+  const parts = new Intl.NumberFormat(activeIntlLocale()).formatToParts(1.1);
+  return parts.find((p) => p.type === 'decimal')?.value ?? '.';
 }
 
 export {nf};

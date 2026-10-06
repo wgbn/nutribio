@@ -1,16 +1,18 @@
 // Navigation: bottom tab bar (mobile) — hidden on desktop where the
-// sidebar takes over. TABS is shared by both.
+// sidebar takes over. TABS is shared by both; labels are i18n keys.
+
+import {useTranslation} from 'react-i18next';
 
 import type {TabId} from '../types';
 import {CalendarIcon, ChartIcon, ClockIcon, UserIcon, type IconProps} from './icons';
 
-export type TabDef = {id: TabId; label: string; Icon: (p: IconProps) => React.JSX.Element};
+export type TabDef = {id: TabId; labelKey: string; Icon: (p: IconProps) => React.JSX.Element};
 
 export const TABS: TabDef[] = [
-  {id: 'today', label: 'Hoje', Icon: ClockIcon},
-  {id: 'plan', label: 'Plano', Icon: CalendarIcon},
-  {id: 'progress', label: 'Progresso', Icon: ChartIcon},
-  {id: 'data', label: 'Dados', Icon: UserIcon},
+  {id: 'today', labelKey: 'nav.today', Icon: ClockIcon},
+  {id: 'plan', labelKey: 'nav.plan', Icon: CalendarIcon},
+  {id: 'progress', labelKey: 'nav.progress', Icon: ChartIcon},
+  {id: 'data', labelKey: 'nav.data', Icon: UserIcon},
 ];
 
 export function TabBar({
@@ -20,13 +22,14 @@ export function TabBar({
   active: TabId;
   onChange: (tab: TabId) => void;
 }) {
+  const {t} = useTranslation();
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden"
       style={{paddingBottom: 'env(safe-area-inset-bottom)'}}
     >
       <div className="mx-auto flex max-w-md">
-        {TABS.map(({id, label, Icon}) => {
+        {TABS.map(({id, labelKey, Icon}) => {
           const isActive = id === active;
           return (
             <button
@@ -39,7 +42,7 @@ export function TabBar({
               aria-current={isActive ? 'page' : undefined}
             >
               <Icon size={22} strokeWidth={isActive ? 2.4 : 2} />
-              <span>{label}</span>
+              <span>{t(labelKey)}</span>
             </button>
           );
         })}

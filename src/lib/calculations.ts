@@ -1,5 +1,6 @@
 // Deterministic local calculations: BMR (Mifflin-St Jeor & Harris-Benedict),
 // TDEE, calorie range per goal and macro targets.
+// Display labels are i18n keys (translated at render / prompt build time).
 
 import type {
   Exercise,
@@ -12,38 +13,39 @@ import type {
   Profile,
   Sex,
 } from '../types';
+import {mealLabel} from './mealTimes';
 
-export const GOAL_LABELS: Record<Goal, string> = {
-  maintain: 'Manter massa',
-  lose_fat: 'Perder gordura',
-  lose_weight: 'Perder peso',
-  gain_mass: 'Ganhar massa',
+export const GOAL_LABEL_KEYS: Record<Goal, string> = {
+  maintain: 'goal.maintain',
+  lose_fat: 'goal.lose_fat',
+  lose_weight: 'goal.lose_weight',
+  gain_mass: 'goal.gain_mass',
 };
 
-export const SEX_LABELS: Record<Sex, string> = {
-  male: 'Masculino',
-  female: 'Feminino',
+export const SEX_LABEL_KEYS: Record<Sex, string> = {
+  male: 'sex.male',
+  female: 'sex.female',
 };
 
-export const FREQUENCY_LABELS: Record<ExerciseFrequency, string> = {
-  none: 'Não faço',
-  '1_2': '1–2x por semana',
-  '3_4': '3–4x por semana',
-  '5_6': '5–6x por semana',
-  '7': 'Todos os dias',
+export const FREQUENCY_LABEL_KEYS: Record<ExerciseFrequency, string> = {
+  none: 'freq.none',
+  '1_2': 'freq.1_2',
+  '3_4': 'freq.3_4',
+  '5_6': 'freq.5_6',
+  '7': 'freq.7',
 };
 
-export const INTENSITY_LABELS: Record<ExerciseIntensity, string> = {
-  low: 'Leve',
-  moderate: 'Moderada',
-  high: 'Alta',
+export const INTENSITY_LABEL_KEYS: Record<ExerciseIntensity, string> = {
+  low: 'intensity.low',
+  moderate: 'intensity.moderate',
+  high: 'intensity.high',
 };
 
-export const EXERCISE_TYPE_LABELS: Record<Exercise['type'], string> = {
-  cardio: 'Cardio',
-  strength: 'Força/musculação',
-  mixed: 'Misto',
-  other: 'Outro',
+export const EXERCISE_TYPE_LABEL_KEYS: Record<Exercise['type'], string> = {
+  cardio: 'exType.cardio',
+  strength: 'exType.strength',
+  mixed: 'exType.mixed',
+  other: 'exType.other',
 };
 
 const ACTIVITY_FACTORS: Record<ExerciseFrequency, number> = {
@@ -165,21 +167,6 @@ export function computeTargets(input: ComputeInput): NutritionTargets {
     carbsG,
     mealSplit,
   };
-}
-
-export function mealLabel(id: MealSlotId): string {
-  switch (id) {
-    case 'breakfast':
-      return 'Pequeno-almoço';
-    case 'morning_snack':
-      return 'Lanche da manhã';
-    case 'lunch':
-      return 'Almoço';
-    case 'afternoon_snack':
-      return 'Lanche da tarde';
-    case 'dinner':
-      return 'Jantar';
-  }
 }
 
 /** Effective weight for calculations: latest biometrics first, else profile. */

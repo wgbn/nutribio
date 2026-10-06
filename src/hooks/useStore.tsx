@@ -1,6 +1,7 @@
 // Global store: app state + localStorage persistence + plan generation.
 
 import {createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode} from 'react';
+import i18next from 'i18next';
 
 import type {
   BioRecord,
@@ -12,6 +13,7 @@ import type {
   Settings,
   WeekDayId,
 } from '../types';
+import {activeLocale} from '../i18n/locales';
 import {computeTargetsFromProfile, effectiveWeight} from '../lib/calculations';
 import {planInputsHash} from '../lib/hash';
 import {parseTimeToMinutes, workoutMealIds, type WorkoutMeals} from '../lib/mealTimes';
@@ -56,7 +58,9 @@ const StoreContext = createContext<StoreValue | null>(null);
 
 function currentInputsHash(profile: Profile | null, biometrics: BiometricsState): string {
   if (!profile) return '';
-  return planInputsHash({profile, latest: biometrics.latest});
+  // Locale is part of the hash: switching language marks the plan stale
+  // (DECISIONS #25). Country is part of the profile itself (DECISIONS #26).
+  return planInputsHash({profile, latest: biometrics.latest, locale: activeLocale()});
 }
 
 export function StoreProvider({children}: {children: ReactNode}) {
@@ -152,7 +156,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
       const hash = currentInputsHash(profile, biometrics);
       // Lazy-load the Gemini SDK so the app shell stays small.
       const mod = await import('../lib/gemini');
-      const {week, overview} = await mod.generateWeeklyPlan({
+      const {week, overview, locale} = await mod.generateWeeklyPlan({
         apiKey: settings.geminiApiKey,
         model: settings.model,
         profile,
@@ -161,14 +165,14 @@ export function StoreProvider({children}: {children: ReactNode}) {
         weightKg,
         onProgress: setGenerationStage,
       });
-      setPlan(assemblePlan(profile, biometrics.latest, targets, week, hash, overview));
+      setPlan(assemblePlan(profile, biometrics.latest, targets, week, hash, overview, locale));
       setGenerationStage(null);
       return true;
     } catch (err) {
       setGenerationError(
         err instanceof Error && 'message' in err
           ? (err as Error).message
-          : 'Erro inesperado a gerar o plano.',
+          : i18next.t('errors.unexpected'),
       );
       return false;
     } finally {
@@ -182,8 +186,9 @@ export function StoreProvider({children}: {children: ReactNode}) {
     setProfile(null);
     setBiometrics({latest: null, history: []});
     setPlan(null);
-    setSettings({geminiApiKey: '', model: settings.model});
-  }, [settings.model]);
+    // The language preference is a device setting — keep it on reset.
+    setSettings({geminiApiKey: '', model: settings.model, locale: settings.locale});
+  }, [settings.model, settings.locale]);
 
   const value = useMemo<StoreValue>(
     () => ({

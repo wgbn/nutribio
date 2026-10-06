@@ -5,16 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "npm run i18n:check && tsc --noEmit && vite build",
     "preview": "vite preview",
-    "icons": "python3 scripts/generate_icons.py"
+    "icons": "python3 scripts/generate_icons.py",
+    "i18n:check": "node scripts/check_i18n.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",
     "chart.js": "^4.5.1",
+    "i18next": "^26.4.2",
     "react": "^19.3.0",
     "react-chartjs-2": "^5.3.1",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-i18next": "^17.0.15"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
