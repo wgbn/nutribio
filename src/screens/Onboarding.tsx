@@ -4,7 +4,7 @@
 import {useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
-import {ChipGroup, Field, NumberInput, Select, TextArea, TextInput} from '../components/Field';
+import {ChipGroup, Checkbox, Field, NumberInput, Select, TextArea, TextInput} from '../components/Field';
 import {ConfirmDialog} from '../components/ConfirmDialog';
 import {LeafIcon, SparklesIcon} from '../components/icons';
 import {useStore} from '../hooks/useStore';
@@ -25,6 +25,7 @@ import type {
   ExerciseType,
   Goal,
   Sex,
+  Supplements,
 } from '../types';
 
 interface FormState {
@@ -35,6 +36,7 @@ interface FormState {
   weight: number | '';
   goal: Goal;
   country: CountryCode;
+  supplements: Supplements;
   exerciseActive: boolean;
   frequency: ExerciseFrequency;
   intensity: ExerciseIntensity;
@@ -100,6 +102,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
     goal: 'lose_fat',
     // Preselect from the device region / app locale (DECISIONS #26).
     country: defaultCountryFor(navigator.languages ?? [navigator.language]),
+    supplements: {wheyProtein: false, creatine: false},
     exerciseActive: false,
     frequency: 'none',
     intensity: 'moderate',
@@ -175,6 +178,7 @@ export function Onboarding({onDone}: {onDone: () => void}) {
       initialWeight: Number(form.weight),
       goal: form.goal,
       country: form.country,
+      supplements: form.supplements,
       exercise: {
         active: form.exerciseActive,
         frequency: form.exerciseActive ? form.frequency : 'none',
@@ -275,6 +279,21 @@ export function Onboarding({onDone}: {onDone: () => void}) {
                 onChange={(e) => set('country', e.target.value as CountryCode)}
               />
             </Field>
+
+            <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <p className="text-sm font-medium text-slate-700">{t('data.supplements')}</p>
+              <Checkbox
+                label={t('data.supplementsWhey')}
+                checked={form.supplements.wheyProtein}
+                onChange={(v) => set('supplements', {...form.supplements, wheyProtein: v})}
+              />
+              <Checkbox
+                label={t('data.supplementsCreatine')}
+                checked={form.supplements.creatine}
+                onChange={(v) => set('supplements', {...form.supplements, creatine: v})}
+              />
+              <p className="text-xs text-slate-400">{t('data.supplementsHint')}</p>
+            </div>
 
             <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">

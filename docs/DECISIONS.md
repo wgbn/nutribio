@@ -410,3 +410,20 @@ re-init error; React bindings re-applied).
 **Consequences:** Keep the module-local `loadedCatalogs` map as the source
 of truth for what is registered (do not query the i18next resource store).
 If i18next is upgraded to a major version, re-verify this pattern.
+
+#32. 2026-10-07 — Optional supplements (whey protein, creatine) in the plan
+**Context:** The owner asked for two checkboxes in onboarding ("Incluir
+suplemento de whey protein" / "Incluir suplemento de creatina") so the
+generated plan considers them.
+**Decision:** `Profile.supplements = { wheyProtein: boolean, creatine:
+boolean }`, collected in onboarding step 1 and editable in Dados (default:
+both off — safe default; old profiles normalized). The Gemini prompt gains a
+`## Supplements` section (+ mandatory rule 14): opted-in supplements are
+included with precise grams per serving (whey e.g. post-workout; creatine
+monohydrate 3–5 g/day); when both are off the model is explicitly told not
+to include any supplements (whole foods only). Since `supplements` is part
+of the Profile, toggling it changes the inputs hash → stale plan →
+user-confirmed regeneration (DECISIONS #6).
+**Consequences:** Every profile write must carry `supplements` through
+(same rule as country/excludedFoods/observations). Supplement products are
+whole-food-independent and only affect dish content when enabled.

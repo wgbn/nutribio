@@ -39,7 +39,7 @@ export const loadProfile = (): Profile | null => {
   const p = read<Profile | null>(KEYS.profile, null);
   if (!p) return null;
   // Normalize profiles saved before excludedFoods/observations/workoutTime/
-  // country existed.
+  // country/supplements existed.
   return {
     ...p,
     excludedFoods: p.excludedFoods ?? '',
@@ -51,6 +51,11 @@ export const loadProfile = (): Profile | null => {
     exercise: {
       ...p.exercise,
       workoutTime: p.exercise.workoutTime ?? '',
+    },
+    // Old profiles have no supplements: default to none (safe default).
+    supplements: {
+      wheyProtein: p.supplements?.wheyProtein ?? false,
+      creatine: p.supplements?.creatine ?? false,
     },
   };
 };

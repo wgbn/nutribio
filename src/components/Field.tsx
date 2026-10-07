@@ -155,3 +155,31 @@ export function ChipGroup<T extends string>({
     </div>
   );
 }
+
+/** Labeled checkbox used by the profile forms (e.g. supplements). */
+export function Checkbox({
+  label,
+  hint,
+  checked,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-2.5">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4.5 w-4.5 shrink-0 accent-emerald-600"
+      />
+      <span className="min-w-0">
+        <span className="block text-sm font-medium text-slate-700">{label}</span>
+        {hint ? <span className="mt-0.5 block text-xs text-slate-400">{hint}</span> : null}
+      </span>
+    </label>
+  );
+}

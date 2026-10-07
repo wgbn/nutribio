@@ -403,6 +403,27 @@ export function buildPrompt(
       ? `\n## User restrictions and preferences\n${preferencesLines.join('\n')}\n`
       : '';
 
+  // Optional supplements (DECISIONS #32): only include what the user opted in.
+  const supplementsSection = (() => {
+    const whey = !!profile.supplements?.wheyProtein;
+    const creatine = !!profile.supplements?.creatine;
+    if (!whey && !creatine) {
+      return `\n## Supplements\n- The user does NOT take supplements. Do NOT include whey protein or creatine in any meal — build the plan from whole foods only.\n`;
+    }
+    const lines: string[] = [];
+    if (whey) {
+      lines.push(
+        `- Include whey protein powder where appropriate (e.g. post-workout or as a protein top-up snack), with PRECISE grams per serving, written in ${languageName}.`,
+      );
+    }
+    if (creatine) {
+      lines.push(
+        `- Include creatine monohydrate (3–5 g per day, e.g. mixed into the post-workout meal or a shake), with PRECISE grams per serving.`,
+      );
+    }
+    return `\n## Supplements\n${lines.join('\n')}\n`;
+  })();
+
   return `You are an expert nutritionist. Create a complete weekly meal plan for one person.
 
 ## User profile
@@ -430,7 +451,7 @@ ${bioLines.join('\n')}
 
 ## Calorie distribution per meal (approximate targets)
 ${splitLines}
-${workoutSection}${preferencesSection}
+${workoutSection}${supplementsSection}${preferencesSection}
 ## Output language (MANDATORY)
 Write ALL human-readable content — the overview, dish names, descriptions, ingredient names, units, notes, shopping item names and package labels — in ${languageName} (${locale}). Food and product names must be the ones a shopper finds in ${countryLabel}, written in ${languageName}.
 
@@ -448,6 +469,7 @@ Write ALL human-readable content — the overview, dish names, descriptions, ing
 11. Strictly respect the excluded foods and the observations listed in "User restrictions and preferences" — no dish may contain an excluded food, and the observations must be reflected in the plan.
 12. Shopping catalog: emit ONE entry in shoppingItems per purchasable product used across ALL dishes and ALL their variations (e.g. "chicken_breast", not "grilled chicken breast" and "shredded chicken" as separate entries). Names must be what the shopper finds in ${countryLabel} supermarkets. Provide packageGrams/packageLabel for packaged products (meat, fish, dairy, grains) and unitWeightGrams for count-based produce (eggs, fruit). Categories: produce, meat_fish, dairy_eggs, bakery_grains, pantry, frozen, drinks, other.
 13. Every ingredient's shoppingKey MUST reference an existing shoppingItems entry, and rawGrams MUST be the raw/purchase-weight equivalent when the recipe amount is cooked (e.g. 150 g cooked rice ≈ 50 g raw rice; 100 g cooked chicken breast ≈ 130 g raw). When the amount is already raw, rawGrams equals amountGrams.
+14. Follow the "Supplements" section exactly: include the selected supplements with precise grams per serving, or NO supplements at all when the user opted out.
 
 Return ONLY the JSON in the given schema.`;
 }

@@ -67,3 +67,13 @@ backend):
 | Supabase project (EU region) + plan decision | Item 4 (4.3) | ☐ |
 | VPS/host decision for the Nuxt API | Item 4 (4.8) | ☐ |
 | Native review of es/fr/de/it translations | Item 1 (1.3) polish | ☐ |
+
+## Ad-hoc features & fixes (outside the 7 items)
+
+Logged in `docs/CHANGELOG.md` and `docs/DECISIONS.md` (never silently
+undone):
+
+- 2026-10-07 — Optional supplements (whey protein, creatine) in the profile
+  and the Gemini prompt (DECISIONS #32).
+- 2026-10-06 — Fix: shopping catalog missing after regenerating from any
+  screen (schema `required` + unified `GeneratePlanButton`).

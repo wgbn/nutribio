@@ -6,6 +6,25 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-10-07 — Optional supplements (whey protein, creatine)
+
+- `Profile.supplements = { wheyProtein, creatine }` (both default off; old
+  profiles normalized in `loadProfile`). Two checkboxes added to onboarding
+  step 1 ("Dados básicos") and to the Dados profile form, via a new reusable
+  `Checkbox` primitive in `Field.tsx`. Every profile write carries
+  `supplements` through (same rule as `country`/`excludedFoods`/
+  `observations`).
+- Gemini prompt: new `## Supplements` section + mandatory rule 14 — opted-in
+  supplements are included with precise grams per serving (whey e.g.
+  post-workout; creatine monohydrate 3–5 g/day); when both are off the model
+  is explicitly instructed to use whole foods only (no whey/creatine).
+- Toggling supplements changes the profile → new inputs hash → stale plan
+  banner → user-confirmed regeneration (DECISIONS #6/#32).
+- i18n: 4 new keys (`data.supplements*`) in all 7 catalogs, parity green.
+- Verified: build + i18n:check; prompt unit test for the 4 combinations
+  (none/whey/creatine/both + rule 14); browser test — Dados shows the two
+  unchecked checkboxes (existing profile normalized to off).
+
 ## 2026-10-06 — Fix: shopping list missing after regenerating from any screen
 
 Reported by the user: generating a new plan from the Today screen produced no

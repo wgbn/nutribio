@@ -122,16 +122,21 @@ interface Profile {
     type: 'cardio' | 'strength' | 'mixed' | 'other';
     workoutTime?: string;  // "HH:MM" (24h); empty when not set/inactive
   };
+  supplements: {
+    wheyProtein: boolean;  // include whey protein in the plan (DECISIONS #32)
+    creatine: boolean;     // include creatine monohydrate in the plan
+  };
   excludedFoods: string;   // free text, empty = none
   observations: string;    // free text (nutritionist instructions)
   updatedAt: number;
 }
 ```
 `loadProfile()` normalizes profiles saved before
-`excludedFoods`/`observations`/`workoutTime`/`country` existed (fills `''`;
-country is preselected from the device region/locale). Any code
-that writes a profile must carry `excludedFoods`/`observations`/`country`
-through (see DECISIONS #11, #26) and set `workoutTime` (see DECISIONS #18).
+`excludedFoods`/`observations`/`workoutTime`/`country`/`supplements` existed
+(fills `''`/`false`; country is preselected from the device region/locale).
+Any code that writes a profile must carry
+`excludedFoods`/`observations`/`country`/`supplements` through (see
+DECISIONS #11, #26, #32) and set `workoutTime` (see DECISIONS #18).
 
 ### Biometrics
 ```ts
@@ -243,13 +248,17 @@ minimization per DECISIONS #29) → **country of residence** ("The user lives in
 in {Country}" + `COUNTRY_CUISINE_HINTS[country]`) → bioimpedance (latest) →
 `Calculations (already done — use these values, do NOT recalculate)` →
 `Calorie distribution per meal` → `## Workout` (only when active + time set:
-workout time + pre/post-workout meal labels) → `User restrictions and
+workout time + pre/post-workout meal labels) → **`## Supplements`** (always
+present — DECISIONS #32: opted-in whey/creatine are included with precise
+grams per serving; both off → "the user does NOT take supplements… build the
+plan from whole foods only") → `User restrictions and
 preferences` (only when non-empty: excluded foods — "NEVER include any of
 these foods in any dish"; observations) → **`Output language (MANDATORY)`**
 ("Write ALL human-readable content … in {LanguageName} ({locale}). Food and
 product names must be the ones a shopper finds in {Country}") → `Mandatory
-rules` (11 rules; rules 4–5 prefer country-typical protein sources and staple
-carbs) → "Return ONLY the JSON in the given schema."
+rules` (14 rules; rules 4–5 prefer country-typical protein sources and staple
+carbs; rule 14 follows the Supplements section) → "Return ONLY the JSON in
+the given schema."
 
 ### Workout time & pre/post-workout meals (`src/lib/mealTimes.ts`)
 - `parseTimeToMinutes("HH:MM") → number | null`.
@@ -370,6 +379,7 @@ locale** (language change → stale plan).
 ### Onboarding (`screens/Onboarding.tsx`) — 3 steps
 1. **Dados básicos**: name, sex (chips), age/height/initial weight (number
    inputs), goal (chips), **country (select, preselected from the device)**,
+   **supplements (two checkboxes: whey protein, creatine — DECISIONS #32)**,
    exercise toggle (frequency/intensity/type + workout time `<input
    type="time">` when active), and the optional Gemini API key field (password
    + show/hide; saved to `settings` on commit). "Continuar" requires
@@ -425,8 +435,9 @@ locale** (language change → stale plan).
 ### EditData / "Dados" (`screens/EditData.tsx`)
 - **Resumo dos cálculos** (live): both BMRs, TDEE, goal calorie range,
   protein/carbs/fat/saturated — recomputed from the form on every change.
-- **Perfil**: name, sex, age, height, initial weight, country (select; must
-  be carried through on every profile write).
+- **Perfil**: name, sex, age, height, initial weight, country (select),
+  supplements (two checkboxes); all must be carried through on every
+  profile write.
 - **Objetivo e exercício**: goal chips + exercise toggle/frequency/intensity/
   type + workout time (time input; drives the pré/pós-treino badges).
 - **Bioimpedância**: date + 11 fields (prefilled from latest); "Nova medição"

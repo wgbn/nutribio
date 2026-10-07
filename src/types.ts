@@ -20,6 +20,12 @@ export interface Exercise {
   workoutTime?: string;
 }
 
+/** Optional supplements the user wants considered in the plan. */
+export interface Supplements {
+  wheyProtein: boolean;
+  creatine: boolean;
+}
+
 export interface Profile {
   name: string;
   sex: Sex;
@@ -30,6 +36,8 @@ export interface Profile {
   /** Country of residence — drives cuisine hints (DECISIONS #26). */
   country: CountryCode;
   exercise: Exercise;
+  /** Optional supplements (whey protein, creatine) for the plan. */
+  supplements: Supplements;
   /** Foods the user never wants in the diet (free text, one per line/comma). */
   excludedFoods: string;
   /** General diet instructions/observations (e.g. from a nutritionist). */
