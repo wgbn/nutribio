@@ -16,7 +16,8 @@
       "Exec(rm)",
       "Exec(git add)",
       "Exec(git commit)",
-      "Exec(npm)"
+      "Exec(npm)",
+      "Exec(docker ps)"
     ]
   }
 }
