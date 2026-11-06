@@ -304,6 +304,55 @@ const enGB = {
       other: 'Other',
     },
   },
+  welcome: {
+    language: 'Language',
+    hero: {
+      badge: 'Weekly meal plans',
+      title: 'Eat better, one week at a time',
+      subtitle:
+        'Nutribio turns your bioimpedance data into a complete weekly meal plan — with the calories and macros calculated on your device and dishes that match your country and your restrictions.',
+      cta: 'Get started',
+      note: 'No account needed · Your data stays on this device',
+    },
+    preview: {
+      title: 'Your week at a glance',
+      days: '7 days',
+      meals: '5 meals a day',
+      variations: '3 variations per meal',
+      shopping: 'Shopping list',
+    },
+    how: {
+      title: 'How it works',
+      step1Title: '1. Your data',
+      step1Body: 'A short profile plus the readings from your bioimpedance scale.',
+      step2Title: '2. Local calculations',
+      step2Body:
+        'Basal metabolism, daily expenditure and macros are computed on your device — the same numbers every time.',
+      step3Title: '3. AI meal plan',
+      step3Body:
+        'Gemini builds the week with three variations per meal, ingredients typical of your country and a shopping list.',
+    },
+    features: {
+      title: 'What you get',
+      todayTitle: 'Today',
+      todayBody: 'The meal of the moment, with portions and macros.',
+      workoutTitle: 'Workout meals',
+      workoutBody: 'Pre- and post-workout badges on the meals around your training.',
+      progressTitle: 'Progress',
+      progressBody: 'Weight, body fat, muscle and more, tracked over time.',
+      shoppingTitle: 'Shopping',
+      shoppingBody: 'Aggregated by supermarket section and ready to share.',
+    },
+    privacy: {
+      title: 'Your data stays with you',
+      body: 'Everything is stored on this device only and your Gemini API key never leaves it. Only what is needed to build the plan is sent to Gemini — your name is not.',
+    },
+    disclaimer: {
+      title: 'Not medical advice',
+      body: 'Nutribio is a support tool, not a substitute for medical or nutritionist guidance. The plan is not intended for pregnancy, eating disorders or chronic disease without professional supervision.',
+    },
+    footer: 'Nutribio · 100% local data · No accounts, no servers',
+  },
   settings: {
     title: 'Settings',
     closeSettings: 'Close settings',

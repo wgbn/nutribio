@@ -304,6 +304,55 @@ const ptBR = {
       other: 'Outros',
     },
   },
+  welcome: {
+    language: 'Idioma',
+    hero: {
+      badge: 'Planos alimentares semanais',
+      title: 'Coma melhor, uma semana de cada vez',
+      subtitle:
+        'O Nutribio transforma os dados da sua balança de bioimpedância em um plano alimentar semanal completo — com as calorias e os macros calculados no seu aparelho e pratos que combinam com o seu país e as suas restrições.',
+      cta: 'Começar',
+      note: 'Sem conta · Seus dados ficam neste aparelho',
+    },
+    preview: {
+      title: 'Sua semana em um relance',
+      days: '7 dias',
+      meals: '5 refeições por dia',
+      variations: '3 variações por refeição',
+      shopping: 'Lista de compras',
+    },
+    how: {
+      title: 'Como funciona',
+      step1Title: '1. Seus dados',
+      step1Body: 'Um perfil curto e as medições da sua balança de bioimpedância.',
+      step2Title: '2. Cálculos locais',
+      step2Body:
+        'Metabolismo basal, gasto diário e macros são calculados no seu aparelho — os mesmos números sempre.',
+      step3Title: '3. Plano com IA',
+      step3Body:
+        'O Gemini monta a semana com três variações por refeição, ingredientes típicos do seu país e uma lista de compras.',
+    },
+    features: {
+      title: 'O que você recebe',
+      todayTitle: 'Hoje',
+      todayBody: 'A refeição do momento, com porções e macros.',
+      workoutTitle: 'Refeições de treino',
+      workoutBody: 'Etiquetas pré e pós-treino nas refeições em volta do seu treino.',
+      progressTitle: 'Progresso',
+      progressBody: 'Peso, gordura corporal, músculo e mais, ao longo do tempo.',
+      shoppingTitle: 'Compras',
+      shoppingBody: 'Agregadas por seção do supermercado e prontas para compartilhar.',
+    },
+    privacy: {
+      title: 'Seus dados ficam com você',
+      body: 'Tudo fica guardado apenas neste aparelho e a sua chave da API do Gemini nunca sai dele. Só é enviado ao Gemini o que é necessário para montar o plano — seu nome não é.',
+    },
+    disclaimer: {
+      title: 'Não é orientação médica',
+      body: 'O Nutribio é uma ferramenta de apoio e não substitui o acompanhamento médico ou de um nutricionista. O plano não é destinado a gestação, transtornos alimentares ou doenças crônicas sem supervisão profissional.',
+    },
+    footer: 'Nutribio · 100% local · Sem contas, sem servidores',
+  },
   settings: {
     title: 'Configurações',
     closeSettings: 'Fechar configurações',

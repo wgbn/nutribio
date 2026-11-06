@@ -1,5 +1,5 @@
-// App shell: onboarding gate, responsive navigation (sidebar on desktop,
-// bottom tab bar on mobile) and settings overlay.
+// App shell: welcome + onboarding gates, responsive navigation (sidebar on
+// desktop, bottom tab bar on mobile) and settings overlay.
 
 import {useState} from 'react';
 
@@ -14,6 +14,7 @@ import {Progress} from './screens/Progress';
 import {Settings} from './screens/Settings';
 import {Shopping} from './screens/Shopping';
 import {Today} from './screens/Today';
+import {Welcome} from './screens/Welcome';
 import type {TabId} from './types';
 
 function Shell() {
@@ -22,14 +23,29 @@ function Shell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   // Incremented when the user asks to register a new measurement (Progress CTA).
   const [newMeasurementSignal, setNewMeasurementSignal] = useState(0);
+  // First-use landing screen (DECISIONS #33): shown while there is no profile,
+  // not persisted — it comes back naturally after "Delete all data".
+  const [welcomeDone, setWelcomeDone] = useState(() => !!profile);
   // The onboarding owns the flow (including the "generate now?" dialog),
   // so it stays mounted until the user explicitly finishes it.
   const [onboardingDone, setOnboardingDone] = useState(() => !!profile);
 
+  if (!welcomeDone) {
+    return (
+      <>
+        <Welcome onStart={() => setWelcomeDone(true)} />
+        <GenerationFeedback onViewPlan={() => setTab('plan')} />
+      </>
+    );
+  }
+
   if (!onboardingDone) {
     return (
       <>
-        <Onboarding onDone={() => setOnboardingDone(true)} />
+        <Onboarding
+          onDone={() => setOnboardingDone(true)}
+          onBack={() => setWelcomeDone(false)}
+        />
         <GenerationFeedback onViewPlan={() => setTab('plan')} />
       </>
     );

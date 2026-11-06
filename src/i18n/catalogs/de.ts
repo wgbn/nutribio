@@ -303,6 +303,55 @@ const de = {
       other: 'Sonstiges',
     },
   },
+  welcome: {
+    language: 'Sprache',
+    hero: {
+      badge: 'Wöchentliche Essenspläne',
+      title: 'Besser essen, Woche für Woche',
+      subtitle:
+        'Nutribio macht aus den Daten deiner Bioimpedanz-Waage einen kompletten Wochenplan — mit Kalorien und Makros, die auf deinem Gerät berechnet werden, und Gerichten, die zu deinem Land und deinen Einschränkungen passen.',
+      cta: 'Loslegen',
+      note: 'Kein Konto nötig · Deine Daten bleiben auf diesem Gerät',
+    },
+    preview: {
+      title: 'Deine Woche auf einen Blick',
+      days: '7 Tage',
+      meals: '5 Mahlzeiten pro Tag',
+      variations: '3 Varianten pro Mahlzeit',
+      shopping: 'Einkaufsliste',
+    },
+    how: {
+      title: 'So funktioniert es',
+      step1Title: '1. Deine Daten',
+      step1Body: 'Ein kurzes Profil und die Messwerte deiner Bioimpedanz-Waage.',
+      step2Title: '2. Lokale Berechnungen',
+      step2Body:
+        'Grundumsatz, Tagesverbrauch und Makros werden auf deinem Gerät berechnet — jedes Mal dieselben Zahlen.',
+      step3Title: '3. Plan mit KI',
+      step3Body:
+        'Gemini stellt die Woche zusammen: drei Varianten pro Mahlzeit, landestypische Zutaten und eine Einkaufsliste.',
+    },
+    features: {
+      title: 'Das bekommst du',
+      todayTitle: 'Heute',
+      todayBody: 'Die aktuelle Mahlzeit, mit Portionen und Makros.',
+      workoutTitle: 'Trainingsmahlzeiten',
+      workoutBody: 'Vor- und Nach-Training-Markierungen an den Mahlzeiten rund um dein Training.',
+      progressTitle: 'Fortschritt',
+      progressBody: 'Gewicht, Körperfett, Muskeln und mehr im Zeitverlauf.',
+      shoppingTitle: 'Einkauf',
+      shoppingBody: 'Nach Supermarkt-Abteilung gruppiert und bereit zum Teilen.',
+    },
+    privacy: {
+      title: 'Deine Daten bleiben bei dir',
+      body: 'Alles wird nur auf diesem Gerät gespeichert, und dein Gemini-API-Schlüssel verlässt es nie. An Gemini geht nur, was für den Plan nötig ist — dein Name nicht.',
+    },
+    disclaimer: {
+      title: 'Kein medizinischer Rat',
+      body: 'Nutribio ist ein Hilfsmittel und ersetzt keine ärztliche oder ernährungstherapeutische Betreuung. Der Plan ist nicht für Schwangerschaft, Essstörungen oder chronische Erkrankungen ohne fachliche Aufsicht gedacht.',
+    },
+    footer: 'Nutribio · 100 % lokal · Keine Konten, keine Server',
+  },
   settings: {
     title: 'Einstellungen',
     closeSettings: 'Einstellungen schließen',

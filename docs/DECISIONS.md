@@ -427,3 +427,29 @@ user-confirmed regeneration (DECISIONS #6).
 **Consequences:** Every profile write must carry `supplements` through
 (same rule as country/excludedFoods/observations). Supplement products are
 whole-food-independent and only affect dish content when enabled.
+
+#33. 2026-11-06 — Welcome screen: in-app gate before onboarding, first use only
+**Context:** Roadmap item 2 (Wave 4) — an introductory screen that explains the
+app before the wizard, like an in-app landing page. The app has no router, and
+the auth CTAs ("I already have an account") only make sense once Item 4 phase
+4.5 lands; the legal texts (Item 5) and the pricing teaser (Item 3) do not
+exist yet.
+**Decision:** `src/screens/Welcome.tsx` is a new gate in `App.tsx`
+(`Welcome → Onboarding → Shell`). Visibility is a local, **non-persisted**
+state `welcomeDone` initialized from `!!profile`: the screen shows while there
+is no profile and reappears naturally after "Delete all data" (reset →
+reload). It is not reachable from Settings. The language selector writes
+`settings.locale` + `changeLocale` (same behavior as Settings), so the copy
+switches live and survives reload/reset. Onboarding step 1 gains an optional
+`onBack` (from App) that returns to Welcome and discards the unsaved form.
+Content: hero + "get started" CTA (hero and bottom), 3-step "how it works",
+4 feature cards, privacy summary (data on device, key never leaves it, name not
+sent to Gemini) and a health disclaimer. No auth CTA, no pricing, no legal
+links yet; illustrations are inline SVG (no images, no new deps); fully
+translated in the 7 locales; responsive per #8. The screen performs no writes
+and no API calls.
+**Consequences:** DECISIONS #7 is untouched (onboarding still owns its
+"generate now?" dialog and stays mounted until the user finishes). The auth
+phase (4.5) adds the "I already have an account" CTA and the consent gate
+(5.3) between Welcome and Onboarding; re-showing Welcome on logout is decided
+then. The public SEO landing page remains deferred.

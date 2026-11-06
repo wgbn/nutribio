@@ -303,6 +303,55 @@ const it = {
       other: 'Altro',
     },
   },
+  welcome: {
+    language: 'Lingua',
+    hero: {
+      badge: 'Piani alimentari settimanali',
+      title: 'Mangia meglio, una settimana alla volta',
+      subtitle:
+        'Nutribio trasforma i dati della tua bilancia a bioimpedenza in un piano alimentare settimanale completo — con calorie e macro calcolati sul tuo dispositivo e piatti adatti al tuo paese e alle tue restrizioni.',
+      cta: 'Inizia',
+      note: 'Nessun account · I tuoi dati restano su questo dispositivo',
+    },
+    preview: {
+      title: 'La tua settimana in un colpo d’occhio',
+      days: '7 giorni',
+      meals: '5 pasti al giorno',
+      variations: '3 varianti per pasto',
+      shopping: 'Lista della spesa',
+    },
+    how: {
+      title: 'Come funziona',
+      step1Title: '1. I tuoi dati',
+      step1Body: 'Un profilo breve e le misurazioni della tua bilancia a bioimpedenza.',
+      step2Title: '2. Calcoli locali',
+      step2Body:
+        'Metabolismo basale, dispendio giornaliero e macro sono calcolati sul tuo dispositivo: gli stessi numeri ogni volta.',
+      step3Title: '3. Piano con IA',
+      step3Body:
+        'Gemini costruisce la settimana con tre varianti per pasto, ingredienti tipici del tuo paese e una lista della spesa.',
+    },
+    features: {
+      title: 'Cosa ottieni',
+      todayTitle: 'Oggi',
+      todayBody: 'Il pasto del momento, con porzioni e macro.',
+      workoutTitle: 'Pasti di allenamento',
+      workoutBody: 'Etichette pre e post-allenamento sui pasti intorno alla tua sessione.',
+      progressTitle: 'Progresso',
+      progressBody: 'Peso, grasso corporeo, muscolo e altro, nel tempo.',
+      shoppingTitle: 'Spesa',
+      shoppingBody: 'Raggruppata per reparto del supermercato e pronta da condividere.',
+    },
+    privacy: {
+      title: 'I tuoi dati restano con te',
+      body: 'Tutto è salvato solo su questo dispositivo e la tua chiave API di Gemini non lo lascia mai. A Gemini va solo ciò che serve per costruire il piano — il tuo nome no.',
+    },
+    disclaimer: {
+      title: 'Non è un consiglio medico',
+      body: 'Nutribio è uno strumento di supporto e non sostituisce il parere medico o di un nutrizionista. Il piano non è pensato per gravidanza, disturbi alimentari o malattie croniche senza supervisione professionale.',
+    },
+    footer: 'Nutribio · 100% locale · Nessun account, nessun server',
+  },
   settings: {
     title: 'Impostazioni',
     closeSettings: 'Chiudi impostazioni',

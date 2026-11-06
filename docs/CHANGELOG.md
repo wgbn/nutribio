@@ -6,6 +6,46 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-11-06 — Welcome / landing screen (roadmap item 2, Wave 4)
+
+First-use landing screen shown before the onboarding wizard: what the app does,
+how it works, what you get, and how data is handled (DECISIONS #33).
+
+- **New screen** `src/screens/Welcome.tsx` (pure presentation — no writes, no
+  API calls): hero (badge + title + value proposition + "Começar" CTA) with a
+  "your week at a glance" card (7 days / 5 meals / 3 variations / shopping
+  list) on `md+`; "Como funciona" (3 numbered cards: data → local
+  calculations → AI plan); "O que tens" (4 feature cards: Today, workout
+  meals, progress, shopping); privacy summary (data stays on the device, the
+  Gemini key never leaves it, the name is not sent) and health disclaimer.
+  Inline SVG only (new `ShieldIcon`, `GlobeIcon`, `AlertIcon` in
+  `components/icons.tsx`), no new dependencies, responsive per DECISIONS #8.
+- **Language selector** in the Welcome header (`auto` + 7 locales): persists
+  `settings.locale` and switches immediately (same path as Settings), so the
+  copy and the choice survive reload and "Delete all data" (reset keeps the
+  language).
+- **Gate** in `App.tsx`: `Welcome → Onboarding → Shell`, via a local
+  non-persisted `welcomeDone` initialized from `!!profile` — Welcome appears
+  while there is no profile and again after a full reset. DECISIONS #7 is
+  untouched (onboarding still owns the "generate now?" dialog).
+- **Onboarding** step 1 footer is now "Voltar | Continuar"; "Voltar" (optional
+  `onBack` prop, wired from App) returns to Welcome and discards the unsaved
+  form.
+- **i18n**: new `welcome.*` namespace (32 keys) in all 7 catalogs — en-GB
+  source, pt-PT, pt-BR (você-form adaptation), es/fr/de/it (agent
+  translations, pending native review like the rest). Catalogs now hold 313
+  keys each; `npm run i18n:check` green.
+- Deliberately **not** included yet: "Já tenho conta" CTA (Wave 6 auth),
+  pricing teaser (item 3), legal document links (item 5).
+- Verified: `npm run build` (i18n parity + strict TS + build, lazy catalogs
+  and Gemini SDK still out of the main bundle); browser test — Welcome on
+  first load, live language switch (pt-PT → de) persisting across reload,
+  "Começar" → onboarding, "Voltar" → Welcome, full onboarding still showing
+  the "Gerar o plano agora?" dialog, reload with a profile goes straight to
+  the shell, "Apagar todos os dados" → Welcome back in the previously chosen
+  language, no request to the Gemini API; layouts checked at 390×844 and
+  1440×900 (pt-PT and de).
+
 ## 2026-10-07 — Optional supplements (whey protein, creatine)
 
 - `Profile.supplements = { wheyProtein, creatine }` (both default off; old

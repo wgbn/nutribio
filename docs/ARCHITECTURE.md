@@ -90,6 +90,7 @@ nutribio/
     │   ├── MealCard.tsx         # meal slot card + MacroChips + variation picker
     │   └── icons.tsx            # inline SVG icon set (no icon dep)
     └── screens/
+        ├── Welcome.tsx          # in-app landing screen (first use only)
         ├── Onboarding.tsx       # 3-step wizard
         ├── Today.tsx            # "Hoje" — meal of the moment
         ├── Plan.tsx             # weekly view
@@ -314,7 +315,7 @@ falls back to the static list when the API returns nothing compatible
   `resolveLocale(navigator.languages)`: `pt-BR`→pt-BR, any other `pt-*`→pt-PT,
   `en-*`→en-GB, es/fr/de/it match, else en-GB. Override stored in
   `settings.locale` (`'auto' | Locale`).
-- Catalogs: TS modules in `src/i18n/catalogs/` (252 keys each); en-GB is the
+- Catalogs: TS modules in `src/i18n/catalogs/` (313 keys each); en-GB is the
   source of truth and is statically imported; the other six are lazy chunks.
 - i18next v26 registers resources only via `init({resources})` (no
   `addResourceBundle`), so `changeLocale` loads the catalog and **re-runs
@@ -366,15 +367,40 @@ locale** (language change → stale plan).
 ## 9. Screens & flows
 
 ### App shell (`App.tsx`)
+- Gate order: `Welcome → Onboarding → (Settings overlay) → Shell`.
+- `!welcomeDone` → `<Welcome/>` (DECISIONS #33). The flag is a local state
+  initialized from `!!profile` and **not persisted**: the landing screen shows
+  while there is no profile, and comes back naturally after "Apagar todos os
+  dados" (reset → reload → no profile).
 - `!onboardingDone` → `<Onboarding/>` (flag initialized from `!!profile`;
-  onboarding owns its confirm dialog — see DECISIONS #7).
+  onboarding owns its confirm dialog — see DECISIONS #7). Onboarding's step 1
+  "Voltar" calls `onBack` → `setWelcomeDone(false)`.
 - `settingsOpen` → `<Settings/>` overlay.
 - Otherwise the active tab renders inside `div.min-h-dvh.md:pl-64` with
   `<Sidebar/>` (desktop) and `<TabBar/>` (mobile).
 - `newMeasurementSignal` counter: Progress' "Registrar medição" increments it
   and switches to the Dados tab, where EditData clears the bio form.
-- `<GenerationFeedback/>` renders in every branch (including onboarding and
-  settings): global loading overlay + result toast for plan generation.
+- `<GenerationFeedback/>` renders in every branch (including welcome,
+  onboarding and settings): global loading overlay + result toast for plan
+  generation.
+
+### Welcome (`screens/Welcome.tsx`)
+- In-app landing screen (not SEO-indexable — navigation is state-based), shown
+  on first use only; pure presentation (no writes, no API calls).
+- Header: brand + compact language `<select>` (`auto` + the 7
+  `LOCALE_LABELS`); changing it does `saveSettings({locale})` +
+  `changeLocale(locale)`, so the copy switches immediately and the choice
+  survives reload/reset (same behavior as Settings).
+- Hero: value proposition + "Começar" CTA (both hero and bottom CTA call
+  `onStart`) + right-hand "your week at a glance" card (4 stats) on `md+`.
+- "Como funciona": 3 numbered cards (data → local calculations → AI plan).
+- "O que tens": 4 feature cards (Today, workout meals, progress, shopping).
+- Privacy summary (data stays on device, key never leaves it, name not sent to
+  Gemini) + health disclaimer ("não é aconselhamento médico"). The full legal
+  documents/link and the pricing teaser arrive with items 5 and 3; the
+  "Já tenho conta" CTA arrives with the auth phase (Wave 6).
+- Illustrations are inline SVG icons from `components/icons.tsx` (no images,
+  no new dependencies). Responsive per DECISIONS #8.
 
 ### Onboarding (`screens/Onboarding.tsx`) — 3 steps
 1. **Dados básicos**: name, sex (chips), age/height/initial weight (number
@@ -382,8 +408,9 @@ locale** (language change → stale plan).
    **supplements (two checkboxes: whey protein, creatine — DECISIONS #32)**,
    exercise toggle (frequency/intensity/type + workout time `<input
    type="time">` when active), and the optional Gemini API key field (password
-   + show/hide; saved to `settings` on commit). "Continuar" requires
-   `basicValid`.
+   + show/hide; saved to `settings` on commit). Footer: "Voltar" (only when
+   `onBack` is provided — returns to Welcome, discarding the form) +
+   "Continuar" (requires `basicValid`).
 2. **Dados da balança** (optional): 11 bioimpedance fields; "Saltar este
    passo (opcional)" or "Continuar".
 3. **Preferências da dieta**: two textareas (`excludedFoods`,

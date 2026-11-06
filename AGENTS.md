@@ -82,7 +82,7 @@ The most critical ones:
 | `src/lib/mealTimes.ts` | 5 meal slots + time windows, next-meal helpers |
 | `src/lib/hash.ts` | FNV-1a inputs hash (plan cache invalidation; includes locale) |
 | `src/hooks/useStore.tsx` | Global state + persistence + plan generation action |
-| `src/screens/*` | Onboarding (3-step wizard), Today, Plan, Shopping (Compras), Progress, EditData (Dados), Settings |
+| `src/screens/*` | Welcome (first-use landing gate), Onboarding (3-step wizard), Today, Plan, Shopping (Compras), Progress, EditData (Dados), Settings |
 | `src/components/*` | TabBar/Sidebar, forms (Field/NumberInput/TextArea), dialogs, charts, meal cards |
 
 ## Documentation

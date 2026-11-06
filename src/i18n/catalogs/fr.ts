@@ -302,6 +302,55 @@ const fr = {
       other: 'Autres',
     },
   },
+  welcome: {
+    language: 'Langue',
+    hero: {
+      badge: 'Menus hebdomadaires',
+      title: 'Mangez mieux, une semaine à la fois',
+      subtitle:
+        "Nutribio transforme les données de votre balance à impédance en un menu hebdomadaire complet — avec les calories et les macros calculées sur votre appareil et des plats adaptés à votre pays et à vos restrictions.",
+      cta: 'Commencer',
+      note: 'Sans compte · Vos données restent sur cet appareil',
+    },
+    preview: {
+      title: 'Votre semaine en un coup d’œil',
+      days: '7 jours',
+      meals: '5 repas par jour',
+      variations: '3 variantes par repas',
+      shopping: 'Liste de courses',
+    },
+    how: {
+      title: 'Comment ça marche',
+      step1Title: '1. Vos données',
+      step1Body: 'Un profil court et les mesures de votre balance à impédance.',
+      step2Title: '2. Calculs locaux',
+      step2Body:
+        'Métabolisme de base, dépense quotidienne et macros sont calculés sur votre appareil — les mêmes chiffres à chaque fois.',
+      step3Title: '3. Menu par IA',
+      step3Body:
+        'Gemini construit la semaine avec trois variantes par repas, des ingrédients typiques de votre pays et une liste de courses.',
+    },
+    features: {
+      title: 'Ce que vous obtenez',
+      todayTitle: 'Aujourd’hui',
+      todayBody: 'Le repas du moment, avec les portions et les macros.',
+      workoutTitle: 'Repas d’entraînement',
+      workoutBody: 'Badges avant et après l’entraînement sur les repas autour de votre séance.',
+      progressTitle: 'Progression',
+      progressBody: 'Poids, masse grasse, muscle et plus, au fil du temps.',
+      shoppingTitle: 'Courses',
+      shoppingBody: 'Regroupées par rayon du supermarché et prêtes à partager.',
+    },
+    privacy: {
+      title: 'Vos données restent avec vous',
+      body: "Tout est stocké uniquement sur cet appareil et votre clé API Gemini n'en sort jamais. Seul le nécessaire pour construire le menu est envoyé à Gemini — votre nom ne l'est pas.",
+    },
+    disclaimer: {
+      title: 'Pas un avis médical',
+      body: "Nutribio est un outil d'aide et ne remplace pas un suivi médical ou diététique. Le menu n'est pas destiné à la grossesse, aux troubles alimentaires ou aux maladies chroniques sans supervision professionnelle.",
+    },
+    footer: 'Nutribio · 100 % local · Sans comptes, sans serveurs',
+  },
   settings: {
     title: "Réglages",
     closeSettings: "Fermer les réglages",

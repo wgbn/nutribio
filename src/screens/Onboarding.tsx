@@ -87,7 +87,7 @@ const BIO_FIELDS: Array<{key: keyof FormState['bio']; labelKey: string}> = [
   {key: 'idealWeight', labelKey: 'bio.idealWeight'},
 ];
 
-export function Onboarding({onDone}: {onDone: () => void}) {
+export function Onboarding({onDone, onBack}: {onDone: () => void; onBack?: () => void}) {
   const {t} = useTranslation();
   const {settings, saveSettings, saveProfile, saveBioRecord, generatePlan} = useStore();
   const [step, setStep] = useState(0);
@@ -395,13 +395,23 @@ export function Onboarding({onDone}: {onDone: () => void}) {
               </Field>
             </div>
 
-            <button
-              onClick={() => setStep(1)}
-              disabled={!basicValid}
-              className="w-full rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700 disabled:opacity-40"
-            >
-              {t('common.continue')}
-            </button>
+            <div className="flex gap-2.5">
+              {onBack ? (
+                <button
+                  onClick={onBack}
+                  className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-600 active:bg-slate-50"
+                >
+                  {t('common.back')}
+                </button>
+              ) : null}
+              <button
+                onClick={() => setStep(1)}
+                disabled={!basicValid}
+                className="flex-1 rounded-xl bg-emerald-600 py-3.5 text-sm font-semibold text-white shadow-sm active:bg-emerald-700 disabled:opacity-40"
+              >
+                {t('common.continue')}
+              </button>
+            </div>
           </div>
         ) : step === 1 ? (
           <div className="space-y-5">

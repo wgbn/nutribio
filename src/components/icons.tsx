@@ -165,6 +165,28 @@ export const CartIcon = (p: IconProps) => (
   </svg>
 );
 
+export const ShieldIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 22s8-3.5 8-10V5.5L12 2 4 5.5V12c0 6.5 8 10 8 10Z" />
+    <path d="m9 12 2 2 4-4" />
+  </svg>
+);
+
+export const GlobeIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18" />
+    <path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z" />
+  </svg>
+);
+
+export const AlertIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 3 2.5 20h19L12 3Z" />
+    <path d="M12 9v5M12 17.5v.5" />
+  </svg>
+);
+
 export const CopyIcon = (p: IconProps) => (
   <svg {...base(p)}>
     <rect x="9" y="9" width="12" height="12" rx="2" />

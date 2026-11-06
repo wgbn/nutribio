@@ -26,7 +26,7 @@ log — roadmap decisions are also recorded there),
 | # | Item | File | Status |
 |---|---|---|---|
 | 1 | Multi-language support (7 locales + LLM output language) | [01-i18n.md](01-i18n.md) | ◐ (2026-10-06 — code complete; native review of es/fr/de/it pending) |
-| 2 | Welcome / landing screen | [02-welcome.md](02-welcome.md) | ☐ |
+| 2 | Welcome / landing screen | [02-welcome.md](02-welcome.md) | ☑ (2026-11-06 — local-only; auth CTA in Wave 6) |
 | 3 | Payments (Stripe, freemium, EUR + BRL) | [03-payments.md](03-payments.md) | ☐ |
 | 4 | Backend & storage (Nuxt API + Supabase) | [04-backend-storage.md](04-backend-storage.md) | ☐ |
 | 5 | Terms, privacy & consent (RGPD/LGPD/UK GDPR) | [05-legal-consent.md](05-legal-consent.md) | ◐ (2026-10-06 — first minimization change done: name removed from the prompt) |
@@ -47,7 +47,7 @@ backend):
 3. **Wave 3** — Item 7 (shopping list: schema extension + local aggregation
    + tab).
 4. **Wave 4** — Item 2 (Welcome screen, local-only first; auth CTAs wired in
-   Wave 6).
+   Wave 6) — ☑ done 2026-11-06.
 5. **Wave 5** — Item 4 phases 4.1–4.2 (monorepo + `packages/core`).
 6. **Wave 6** — Item 5 phase 5.1–5.2 (data inventory + legal texts — must
    exist before real user data leaves the device) followed by Item 4 phases
