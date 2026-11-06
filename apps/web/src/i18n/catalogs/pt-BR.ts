@@ -180,7 +180,7 @@ const ptBR = {
     currentPlanNote:
       'Plano atual gerado para {{kcal}} kcal/dia. Estes valores passam a valer quando você gerar um novo plano.',
     profile: 'Perfil',
-    name: 'Nome',
+    name: 'Nome (opcional)',
     sex: 'Sexo',
     age: 'Idade (anos)',
     height: 'Altura (cm)',
@@ -233,7 +233,7 @@ const ptBR = {
   onboarding: {
     title: 'Vamos começar',
     intro: 'Primeiro, conte quem você é e qual é o seu objetivo. Os dados ficam só no seu dispositivo.',
-    name: 'Como você se chama?',
+    name: 'Como você se chama? (opcional)',
     namePlaceholder: 'Seu nome',
     agePlaceholder: 'ex.: 35',
     heightPlaceholder: 'ex.: 175',
@@ -392,11 +392,28 @@ const ptBR = {
         'Você vai perder o perfil, o histórico de medições e o plano atual. Esta ação não pode ser desfeita.',
       confirm: 'Excluir tudo',
     },
+    legalSection: 'Documentos legais',
+    legalNote:
+      'Estes documentos são versionados. Uma nova versão exige a sua aceitação antes de continuar a usar o serviço.',
     importNotice: 'Dados importados. Recarregando…',
     importInvalid: 'Arquivo inválido. Nada foi alterado.',
     importError: 'Não foi possível ler o arquivo.',
     resetNotice: 'Todos os dados foram excluídos. Recarregando…',
     footer: 'Nutribio v0.1 · Dados 100% locais · Sem contas, sem servidores',
+  },
+  legal: {
+    back: 'Voltar',
+    loading: 'Carregando…',
+    loadError: 'Não foi possível carregar este documento. Tente novamente.',
+    version: 'Versão {{version}}',
+    updated: 'Última atualização: {{date}}',
+    pendingReview: 'Versão de pré-lançamento — este texto ainda aguarda revisão jurídica.',
+    doc: {
+      terms: 'Termos de Uso',
+      privacy: 'Política de Privacidade',
+      health_data: 'Consentimento para dados de saúde',
+      health_disclaimer: 'Aviso de saúde',
+    },
   },
   generation: {
     title: 'Gerando seu plano alimentar…',

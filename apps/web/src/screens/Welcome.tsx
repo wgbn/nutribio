@@ -6,6 +6,8 @@
 import {useMemo} from 'react';
 import {useTranslation} from 'react-i18next';
 
+import type {LegalDocumentId} from '@nutribio/core';
+
 import {
   ActivityIcon,
   AlertIcon,
@@ -24,7 +26,13 @@ import {useStore} from '../hooks/useStore';
 import {changeLocale} from '../i18n';
 import {LOCALES, LOCALE_LABELS, type LocaleSetting} from '../i18n/locales';
 
-export function Welcome({onStart}: {onStart: () => void}) {
+export function Welcome({
+  onStart,
+  onOpenLegal,
+}: {
+  onStart: () => void;
+  onOpenLegal: (id: LegalDocumentId) => void;
+}) {
   const {t} = useTranslation();
   const {settings, saveSettings} = useStore();
 
@@ -176,6 +184,17 @@ export function Welcome({onStart}: {onStart: () => void}) {
             <p className="mt-2 text-sm leading-relaxed text-emerald-900/80">
               {t('welcome.privacy.body')}
             </p>
+            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
+              {(['terms', 'privacy', 'health_disclaimer'] as const).map((id) => (
+                <button
+                  key={id}
+                  onClick={() => onOpenLegal(id)}
+                  className="text-xs font-semibold text-emerald-700 underline underline-offset-2 hover:text-emerald-800"
+                >
+                  {t(`legal.doc.${id}`)}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="rounded-3xl border border-amber-100 bg-amber-50/70 p-5">
             <div className="flex items-center gap-2 text-amber-700">

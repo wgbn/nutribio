@@ -8,6 +8,7 @@ export * from './types';
 export * from './translate';
 export * from './locales';
 export * from './countries';
+export * from './legal';
 export * from './format';
 export * from './mealTimes';
 export * from './calculations';

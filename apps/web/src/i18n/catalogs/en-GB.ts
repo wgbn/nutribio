@@ -180,7 +180,7 @@ const enGB = {
     currentPlanNote:
       'Current plan generated for {{kcal}} kcal/day. These values apply once you generate a new plan.',
     profile: 'Profile',
-    name: 'Name',
+    name: 'Name (optional)',
     sex: 'Sex',
     age: 'Age (years)',
     height: 'Height (cm)',
@@ -233,7 +233,7 @@ const enGB = {
   onboarding: {
     title: "Let's get started",
     intro: 'First, tell us who you are and what your goal is. Data stays only on your device.',
-    name: 'What is your name?',
+    name: 'What is your name? (optional)',
     namePlaceholder: 'Your name',
     agePlaceholder: 'e.g. 35',
     heightPlaceholder: 'e.g. 175',
@@ -392,11 +392,28 @@ const enGB = {
         'You will lose the profile, measurement history and current plan. This action cannot be undone.',
       confirm: 'Delete everything',
     },
+    legalSection: 'Legal documents',
+    legalNote:
+      'These documents are versioned. A new version requires your acceptance before you continue using the service.',
     importNotice: 'Data imported. Reloading…',
     importInvalid: 'Invalid file. Nothing was changed.',
     importError: 'Could not read the file.',
     resetNotice: 'All data deleted. Reloading…',
     footer: 'Nutribio v0.1 · 100% local data · No accounts, no servers',
+  },
+  legal: {
+    back: 'Back',
+    loading: 'Loading…',
+    loadError: 'Could not load this document. Please try again.',
+    version: 'Version {{version}}',
+    updated: 'Last updated: {{date}}',
+    pendingReview: 'Pre-launch version — this text is still pending legal review.',
+    doc: {
+      terms: 'Terms of Use',
+      privacy: 'Privacy Policy',
+      health_data: 'Health-data consent',
+      health_disclaimer: 'Health disclaimer',
+    },
   },
   generation: {
     title: 'Generating your meal plan…',

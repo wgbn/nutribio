@@ -5,7 +5,7 @@
 // Every list must stay in sync with the matching union type in
 // `@nutribio/core` — the API maps rows back into the core domain types.
 
-import {LOCALES, SUPPORTED_COUNTRIES} from '@nutribio/core';
+import {CONSENT_DOCUMENT_IDS, LOCALES, SUPPORTED_COUNTRIES} from '@nutribio/core';
 
 export const SEX_VALUES = ['male', 'female'] as const;
 
@@ -59,7 +59,7 @@ export const PLAN_ERROR_CODE_VALUES = [
 ] as const;
 
 /** The three separate consents required at signup (DECISIONS #29). */
-export const CONSENT_DOCUMENT_VALUES = ['terms_privacy', 'health_data', 'age_18'] as const;
+export const CONSENT_DOCUMENT_VALUES = CONSENT_DOCUMENT_IDS;
 
 export type SexValue = (typeof SEX_VALUES)[number];
 export type GoalValue = (typeof GOAL_VALUES)[number];

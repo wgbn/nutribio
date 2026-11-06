@@ -117,6 +117,8 @@ API (`apps/api`, roadmap 4.4 — see `docs/ARCHITECTURE.md` §16):
 | `packages/db/` | `@nutribio/db` — database layer (roadmap 4.3): Drizzle schema for the private `app` schema, `createDb()` factory (API only), `supabase/config.toml` (local stack + Auth + Google + `remotes.production`), migrations and 7-locale auth email templates |
 | `apps/api/` | `@nutribio/api` — Nuxt server only (roadmap 4.4): JWKS auth, CORS allow-list, code-based errors, health, profile/bio/history CRUD, account export/deletion; integration tests in `apps/api/tests` |
 | `apps/web/src/i18n/` | i18n runtime + active-locale tracker (`locales.ts`), `Translate` adapter (`translate.ts`) and the 7 catalogs (`catalogs/`) |
+| `apps/web/src/legal/` | legal texts (Terms, Privacy, health-data consent, disclaimer) as typed blocks — one module per locale, lazy-loaded; versions live in `packages/core/src/legal.ts` |
+| `apps/web/src/components/LegalDocumentView.tsx` | in-app legal reader (opened from Welcome/Settings) |
 | `packages/core/src/calculations.ts` | BMR (Mifflin-St Jeor + Harris-Benedict), TDEE, calorie ranges, macros, meal split |
 | `packages/core/src/countries.ts` | `SUPPORTED_COUNTRIES` + country names/preselection (drives prompt cuisine) |
 | `packages/core/src/prompt.ts` | Gemini prompt builder (English instructions + output-language + country blocks) |
@@ -147,6 +149,9 @@ API (`apps/api`, roadmap 4.4 — see `docs/ARCHITECTURE.md` §16):
   dependencies.
 - **`docs/SUPABASE_SETUP.md`** — owner guide for the database/Auth setup
   (project, JWT keys, CLI link, schema push, Auth config, Google OAuth, SMTP).
+- **`docs/legal/`** — data inventory, RoPA and DPIA-lite (roadmap 5.1); the
+  go-live checklist for the legal texts and the placeholders only the owner can
+  fill lives in `docs/legal/README.md`.
 
 ## Verification
 

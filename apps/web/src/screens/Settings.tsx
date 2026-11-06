@@ -4,11 +4,18 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
-import {describeError} from '@nutribio/core';
+import {describeError, type LegalDocumentId} from '@nutribio/core';
 
 import {ConfirmDialog} from '../components/ConfirmDialog';
 import {Field, Select, TextArea, TextInput} from '../components/Field';
-import {DownloadIcon, RefreshIcon, TrashIcon, UploadIcon, XIcon} from '../components/icons';
+import {
+  ChevronRightIcon,
+  DownloadIcon,
+  RefreshIcon,
+  TrashIcon,
+  UploadIcon,
+  XIcon,
+} from '../components/icons';
 import {useInstallPrompt} from '../hooks/useInstallPrompt';
 import {useStore} from '../hooks/useStore';
 import {changeLocale} from '../i18n';
@@ -16,7 +23,13 @@ import {LOCALES, LOCALE_LABELS, type LocaleSetting} from '../i18n/locales';
 import type {ModelOption} from '../lib/models';
 import {DEFAULT_MODEL, exportAllData, importAllData, MODEL_OPTIONS} from '../lib/storage';
 
-export function Settings({onClose}: {onClose: () => void}) {
+export function Settings({
+  onClose,
+  onOpenLegal,
+}: {
+  onClose: () => void;
+  onOpenLegal: (id: LegalDocumentId) => void;
+}) {
   const {t} = useTranslation();
   const {settings, saveSettings, profile, saveProfile, resetAll} = useStore();
   const {canInstall, installed, promptInstall} = useInstallPrompt();
@@ -312,6 +325,24 @@ export function Settings({onClose}: {onClose: () => void}) {
             <TrashIcon size={15} />
             {t('settings.deleteAll')}
           </button>
+        </section>
+
+        {/* Legal documents (roadmap 5.2) */}
+        <section className="mb-4 space-y-3 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm md:col-span-2 md:mb-0">
+          <h2 className="text-sm font-semibold text-slate-700">{t('settings.legalSection')}</h2>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {(['terms', 'privacy', 'health_data', 'health_disclaimer'] as const).map((id) => (
+              <button
+                key={id}
+                onClick={() => onOpenLegal(id)}
+                className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-left text-sm font-medium text-slate-600 active:bg-slate-50"
+              >
+                <span className="min-w-0">{t(`legal.doc.${id}`)}</span>
+                <ChevronRightIcon size={16} className="shrink-0 text-slate-400" />
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400">{t('settings.legalNote')}</p>
         </section>
         </div>
 

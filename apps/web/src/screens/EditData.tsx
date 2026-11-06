@@ -239,7 +239,6 @@ export function EditData({
     setForm((f) => ({...f, bio: {...f.bio, [key]: value}}));
 
   const basicValid =
-    form.name.trim().length > 0 &&
     form.age !== '' &&
     form.age > 0 &&
     form.height !== '' &&

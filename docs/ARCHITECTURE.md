@@ -73,6 +73,7 @@ nutribio/
 │   ├── ARCHITECTURE.md          # this file
 │   ├── CHANGELOG.md             # mandatory change log
 │   ├── DECISIONS.md             # decision log (ADR-style)
+│   ├── legal/                   # data inventory, RoPA, DPIA-lite (item 5, phase 5.1)
 │   └── SUPABASE_SETUP.md        # owner guide: project, Auth, OAuth, SMTP
 ├── apps/
 │   ├── web/                     # the shipped PWA
@@ -91,6 +92,7 @@ nutribio/
 │   │       │   ├── locales.ts   # active locale tracking (pure definitions live in core)
 │   │       │   ├── index.ts     # i18next runtime (lazy catalogs, changeLocale via re-init)
 │   │       │   └── catalogs/    # en-GB (source), pt-PT, pt-BR, es, fr, de, it (TS modules)
+│   │       ├── legal/           # legal texts: typed blocks, one module per locale (lazy)
 │   │       ├── lib/
 │   │       │   ├── storage.ts   # localStorage keys, defaults, bio merge/remove, export/import
 │   │       │   ├── models.ts    # live model listing (ai.models.list)
@@ -99,7 +101,7 @@ nutribio/
 │   │       ├── hooks/
 │   │       │   ├── useStore.tsx # global store + persistence + generatePlan
 │   │       │   └── useInstallPrompt.ts
-│   │       ├── components/      # TabBar/Sidebar, Field, dialogs, charts, meal cards, icons
+│   │       ├── components/      # TabBar/Sidebar, Field, dialogs, charts, meal cards, icons, legal reader
 │   │       └── screens/         # Welcome, Onboarding, Today, Plan, Shopping, Progress, EditData, Settings
 │   └── api/                     # @nutribio/api — Nuxt server only (see §16)
 │       ├── package.json         # nuxt, jose, zod, @nutribio/core, @nutribio/db
@@ -172,7 +174,7 @@ Storage keys (see `src/lib/storage.ts`): `nutribio.v1.profile`,
 ### Profile (`packages/core/src/types.ts`)
 ```ts
 interface Profile {
-  name: string;
+  name: string;          // optional (empty allowed) — greeting only, never sent to Gemini
   sex: 'male' | 'female';
   age: number;
   height: number;        // cm
@@ -448,6 +450,10 @@ locale** (language change → stale plan).
 
 ### App shell (`App.tsx`)
 - Gate order: `Welcome → Onboarding → (Settings overlay) → Shell`.
+- `legalDoc` (local state, not persisted) renders `<LegalDocumentView/>` **over
+  any branch** (Welcome, Onboarding, Settings, shell); closing it returns to
+  the branch that opened it, because the gate/tab state is untouched
+  (roadmap 5.2).
 - `!welcomeDone` → `<Welcome/>` (DECISIONS #33). The flag is a local state
   initialized from `!!profile` and **not persisted**: the landing screen shows
   while there is no profile, and comes back naturally after "Apagar todos os
@@ -476,14 +482,15 @@ locale** (language change → stale plan).
 - "Como funciona": 3 numbered cards (data → local calculations → AI plan).
 - "O que tens": 4 feature cards (Today, workout meals, progress, shopping).
 - Privacy summary (data stays on device, key never leaves it, name not sent to
-  Gemini) + health disclaimer ("não é aconselhamento médico"). The full legal
-  documents/link and the pricing teaser arrive with items 5 and 3; the
-  "Já tenho conta" CTA arrives with the auth phase (Wave 6).
+  Gemini) + health disclaimer ("não é aconselhamento médico"). The privacy card
+  links to the **Terms of Use**, **Privacy Policy** and **Health disclaimer**
+  (roadmap 5.2, opens the legal reader); the pricing teaser arrives with item 3
+  and the "Já tenho conta" CTA with the auth phase (Wave 6).
 - Illustrations are inline SVG icons from `components/icons.tsx` (no images,
   no new dependencies). Responsive per DECISIONS #8.
 
 ### Onboarding (`screens/Onboarding.tsx`) — 3 steps
-1. **Dados básicos**: name, sex (chips), age/height/initial weight (number
+1. **Dados básicos**: name (**optional** — DECISIONS #46), sex (chips), age/height/initial weight (number
    inputs), goal (chips), **country (select, preselected from the device)**,
    **supplements (two checkboxes: whey protein, creatine — DECISIONS #32)**,
    exercise toggle (frequency/intensity/type + workout time `<input
@@ -568,6 +575,32 @@ locale** (language change → stale plan).
 - **Aplicação**: install button (`useInstallPrompt`), HTTPS note.
 - **Os teus dados**: export/import JSON backup, "Apagar todos os dados"
   (danger confirm → `resetAll` + reload).
+- **Documentos legais**: buttons for the Terms of Use, Privacy Policy,
+  health-data consent and health disclaimer, which open the legal reader
+  (roadmap 5.2); note that a new document version requires acceptance.
+
+### Legal documents (`src/legal/` + `components/LegalDocumentView.tsx`) — roadmap 5.2
+- Four documents: `terms`, `privacy`, `health_data`, `health_disclaimer`.
+  Their **versions** live in `packages/core/src/legal.ts`
+  (`LEGAL_DOCUMENT_VERSIONS`, `CONSENT_DOCUMENT_IDS`/`_VERSIONS`/`_SOURCES`),
+  shared with the API so `app.consents` records exactly what the user saw
+  (phase 5.3). Bumping a version forces re-consent; `LEGAL_TEXTS_APPROVED`
+  flips the "pending legal review" note without touching the texts.
+- Texts are **typed data**, not Markdown/HTML:
+  `LegalBlock = heading | paragraph | list | note` in
+  `apps/web/src/legal/types.ts`; one module per locale (`en-GB` is the source,
+  the other six are agent translations pending native review), each
+  **lazy-loaded** by `src/legal/index.ts` (en-GB fallback) so no legal text is
+  in the entry bundle.
+- The v1 texts describe the **target service** (account, EU database,
+  server-side AI generation) and show `[PLACEHOLDER]` markers for data only the
+  owner can provide; the reasoning and the go-live checklist are in
+  `docs/legal/` (DECISIONS #47).
+- `LegalDocumentView` shows the title, version, last-updated date, the review
+  note and the blocks; it follows the active locale (reloads on language
+  change) and is reachable from Welcome and Settings.
+- `npm run i18n:check` verifies legal parity (same documents, block structure,
+  versions and placeholders across locales).
 
 ## 10. Components
 
@@ -585,6 +618,10 @@ locale** (language change → stale plan).
   `isGenerating` + success/error toast (with "Ver plano"/"Tentar de novo"
   actions). Rendered in App for every branch (tabs, onboarding, settings);
   the single channel for generation feedback (DECISIONS #19).
+- `LegalDocumentView` — full-screen legal document reader (back button, title,
+  version, last-updated date, "pending legal review" note and the typed
+  blocks); opened from Welcome/Settings through the `legalDoc` branch in App
+  (roadmap 5.2).
 - `icons.tsx` — inline SVG icon set (stroke style).
 
 ## 11. PWA & responsive
@@ -630,11 +667,12 @@ The site is deployed as a GitHub Pages **project site** at
 
 ## 13. Testing & verification
 
-- `npm run build -w @nutribio/web` — i18n parity check + `tsc --noEmit` on
-  `packages/core` (no DOM/Node libs) + strict TS on the web app + production
-  build (output in `apps/web/dist/`); also check the chunk layout (the Gemini
-  SDK, the prompt/schema/normalize code and the 6 lazy catalogs must stay out
-  of the main bundle — the prompt lands in the lazy `gemini` chunk).
+- `npm run build -w @nutribio/web` — i18n parity check (UI keys **and** the
+  legal documents: ids, block structure, versions, placeholders) + `tsc
+  --noEmit` on `packages/core` (no DOM/Node libs) + strict TS on the web app +
+  production build (output in `apps/web/dist/`); also check the chunk layout
+  (the Gemini SDK, the prompt/schema/normalize code, the 6 lazy catalogs and
+  all 7 legal texts must stay out of the entry bundle).
 - `npm run typecheck -w @nutribio/core` — core-only type check.
 - Pure-logic tests: bundle a scratch entry with
   `npx esbuild <file> --bundle --format=cjs --platform=node` and run with
@@ -651,6 +689,11 @@ The site is deployed as a GitHub Pages **project site** at
   summary values, bioimpedance history add/edit/delete, model dropdown
   fallback (no key / invalid key), responsive layouts at 390×844 and
   1440×900, PWA manifest + SW registration in preview.
+- Legal texts (5.2): `npm run i18n:check` covers the document structure;
+  browser check — Welcome/Settings links open the reader in the active
+  language, language switch followed by reopening shows the new language,
+  back returns to the previous screen, onboarding/Dados save without a name,
+  no horizontal overflow at 390×844 and 1440×900.
 - The real Gemini generation path requires a valid API key (user-provided).
 - Database/Auth (phase 4.3), local stack only — see §15.8:
   `npm run db:verify -w @nutribio/db` (RLS, grants, cascade, constraints,

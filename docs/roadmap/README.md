@@ -29,7 +29,7 @@ log — roadmap decisions are also recorded there),
 | 2 | Welcome / landing screen | [02-welcome.md](02-welcome.md) | ☑ (2026-11-06 — local-only; auth CTA in Wave 6) |
 | 3 | Payments (Stripe, freemium, EUR + BRL) | [03-payments.md](03-payments.md) | ☐ |
 | 4 | Backend & storage (Nuxt API + Supabase) | [04-backend-storage.md](04-backend-storage.md) | ◐ (2026-11-06 — 4/9 phases: 4.1–4.4; 4.5–4.9 pending) |
-| 5 | Terms, privacy & consent (RGPD/LGPD/UK GDPR) | [05-legal-consent.md](05-legal-consent.md) | ◐ (2026-10-06 — first minimization change done: name removed from the prompt) |
+| 5 | Terms, privacy & consent (RGPD/LGPD/UK GDPR) | [05-legal-consent.md](05-legal-consent.md) | ◐ (2026-11-06 — 5.1 inventory/RoPA/DPIA + 5.2 texts v1 rendered in-app; owner + lawyer review pending) |
 | 6 | Country-aware cuisine (onboarding + prompt) | [06-country-cuisine.md](06-country-cuisine.md) | ☑ (2026-10-06) |
 | 7 | Weekly shopping list ("Compras" tab) | [07-shopping-list.md](07-shopping-list.md) | ☑ (2026-10-06) |
 
@@ -54,9 +54,10 @@ backend):
    Supabase project + schema + Auth config; then the API skeleton in
    `apps/api`, still local-only) — order changed by DECISIONS #36 and #43:
    4.3/4.4 create infrastructure and store no user data, so they can precede
-   the legal texts. Remaining in this wave: Item 5 phases 5.1–5.2 (data
-   inventory + legal texts — must exist before real user data leaves the
-   device), then Item 4 phases 4.5–4.9 (auth UI + data layer + background
+   the legal texts. **Item 5 phases 5.1–5.2 done** (2026-11-06 — data
+   inventory/RoPA/DPIA in `docs/legal/` and the v1 legal texts rendered in-app
+   from Welcome/Settings; **owner + lawyer review still open**). Remaining in
+   this wave: Item 4 phases 4.5–4.9 (auth UI + data layer + background
    generation) together with Item 5 phases 5.3–5.5 (consent gate +
    data-subject rights).
 7. **Wave 7** — Item 3 (Stripe payments; requires backend + auth + legal).

@@ -3,7 +3,10 @@
 
 import {useState} from 'react';
 
+import type {LegalDocumentId} from '@nutribio/core';
+
 import {GenerationFeedback} from './components/GenerationFeedback';
+import {LegalDocumentView} from './components/LegalDocumentView';
 import {Sidebar} from './components/Sidebar';
 import {TabBar} from './components/TabBar';
 import {StoreProvider, useStore} from './hooks/useStore';
@@ -29,11 +32,23 @@ function Shell() {
   // The onboarding owns the flow (including the "generate now?" dialog),
   // so it stays mounted until the user explicitly finishes it.
   const [onboardingDone, setOnboardingDone] = useState(() => !!profile);
+  // Legal document reader (roadmap 5.2): overlays any branch (Welcome,
+  // Onboarding, Settings, shell) and closing it returns to that branch.
+  const [legalDoc, setLegalDoc] = useState<LegalDocumentId | null>(null);
+
+  if (legalDoc) {
+    return (
+      <>
+        <LegalDocumentView documentId={legalDoc} onClose={() => setLegalDoc(null)} />
+        <GenerationFeedback onViewPlan={() => setTab('plan')} />
+      </>
+    );
+  }
 
   if (!welcomeDone) {
     return (
       <>
-        <Welcome onStart={() => setWelcomeDone(true)} />
+        <Welcome onStart={() => setWelcomeDone(true)} onOpenLegal={setLegalDoc} />
         <GenerationFeedback onViewPlan={() => setTab('plan')} />
       </>
     );
@@ -54,7 +69,7 @@ function Shell() {
   if (settingsOpen) {
     return (
       <>
-        <Settings onClose={() => setSettingsOpen(false)} />
+        <Settings onClose={() => setSettingsOpen(false)} onOpenLegal={setLegalDoc} />
         <GenerationFeedback onViewPlan={() => setTab('plan')} />
       </>
     );

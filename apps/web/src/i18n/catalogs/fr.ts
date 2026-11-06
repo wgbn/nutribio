@@ -179,7 +179,7 @@ const fr = {
     currentPlanNote:
       "Plan actuel généré pour {{kcal}} kcal/jour. Ces valeurs s'appliquent quand vous générerez un nouveau plan.",
     profile: "Profil",
-    name: "Nom",
+    name: "Nom (facultatif)",
     sex: "Sexe",
     age: "Âge (années)",
     height: "Taille (cm)",
@@ -231,7 +231,7 @@ const fr = {
   onboarding: {
     title: "Commençons",
     intro: "D'abord, dites-nous qui vous êtes et quel est votre objectif. Les données restent uniquement sur votre appareil.",
-    name: "Comment vous appelez-vous ?",
+    name: "Comment vous appelez-vous ? (facultatif)",
     namePlaceholder: "Votre nom",
     agePlaceholder: "ex. : 35",
     heightPlaceholder: "ex. : 175",
@@ -390,11 +390,29 @@ const fr = {
         "Vous perdrez le profil, l'historique des mesures et le plan actuel. Cette action est irréversible.",
       confirm: "Tout supprimer",
     },
+    legalSection: 'Documents juridiques',
+    legalNote:
+      'Ces documents sont versionnés. Une nouvelle version exige votre acceptation avant de continuer à utiliser le service.',
     importNotice: "Données importées. Rechargement…",
     importInvalid: "Fichier invalide. Rien n'a été modifié.",
     importError: "Impossible de lire le fichier.",
     resetNotice: "Toutes les données ont été supprimées. Rechargement…",
     footer: "Nutribio v0.1 · Données 100% locales · Sans comptes, sans serveurs",
+  },
+  legal: {
+    back: 'Retour',
+    loading: 'Chargement…',
+    loadError: 'Impossible de charger ce document. Réessayez.',
+    version: 'Version {{version}}',
+    updated: 'Dernière mise à jour : {{date}}',
+    pendingReview:
+      'Version de pré-lancement — ce texte est encore en attente de validation juridique.',
+    doc: {
+      terms: 'Conditions d’utilisation',
+      privacy: 'Politique de confidentialité',
+      health_data: 'Consentement relatif aux données de santé',
+      health_disclaimer: 'Avertissement santé',
+    },
   },
   generation: {
     title: "Génération de votre plan alimentaire…",

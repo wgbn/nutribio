@@ -6,6 +6,61 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-11-06 — Legal texts, in-app reader and data inventory (roadmap item 5, phases 5.1–5.2, Wave 6)
+
+The app now ships its legal documents: a data inventory/RoPA/DPIA baseline
+(5.1) and the four v1 texts — Terms of Use, Privacy Policy, health-data
+consent and health disclaimer — in the 7 locales, rendered in-app and linked
+from Welcome and Settings (5.2). **Owner + lawyer review is still open** and
+blocks go-live (DECISIONS #29/#47).
+
+- **5.1 `docs/legal/`** (new): `README.md` (status, placeholders, open items),
+  `data-inventory.md` (every field: purpose, legal basis, sensitivity, local vs
+  server storage, sent-to-Gemini, retention), `ropa.md` (processing activities
+  for account, profile, bioimpedance, generation, shopping, consents, billing,
+  logs, email) and `dpia-lite.md` (risks R1–R10 with mitigations and residual
+  risk). The inventory confirmed the minimization state and recorded three
+  open items: no 18+ gate yet (5.3), plaintext Gemini key in localStorage
+  (until 4.6) and the Welcome "data stays on device" copy (until 4.6).
+- **Name optional (5.1, DECISIONS #46)**: `Onboarding` and `EditData` no longer
+  require `Profile.name`; the labels read "(optional)" in all 7 catalogs. The
+  API already accepted an empty name (`z.string().max(60)`, DB default `''`).
+- **Versions in core (5.2)**: `packages/core/src/legal.ts` exports
+  `LEGAL_DOCUMENT_VERSIONS` (`terms`/`privacy`/`health_data`/
+  `health_disclaimer` = `v1`), `CONSENT_DOCUMENT_IDS`/`_VERSIONS`/`_SOURCES`
+  (mapping to the `app.consents` values) and `LEGAL_TEXTS_APPROVED = false`.
+  `packages/db` now derives `CONSENT_DOCUMENT_VALUES` from that constant
+  (single source with the DB CHECK).
+- **Texts (5.2)**: `apps/web/src/legal/` — typed blocks
+  (`heading|paragraph|list|note`), one module per locale (en-GB source +
+  pt-PT, pt-BR, es, fr, de, it), **all lazy-loaded** with an en-GB fallback.
+  v1 describes the target service (account, EU database, server-side
+  generation); controller/contact/retention are visible placeholders.
+- **Reader (5.2)**: `components/LegalDocumentView.tsx` (title, version,
+  last-updated date, "pending legal review" note, back button) opened through
+  a `legalDoc` branch in `App.tsx`, so it overlays Welcome, Onboarding,
+  Settings and the shell and returns to the previous screen. Links: the
+  Welcome privacy card (Terms, Privacy, Health disclaimer) and a new "Legal
+  documents" section in Settings (all four).
+- **i18n**: new `legal.*` namespace (7 keys + 4 document labels) and
+  `settings.legalSection`/`legalNote` — 325 keys × 7, parity green.
+  `scripts/check_i18n.mjs` now also bundles the legal modules and verifies
+  document ids, block structure (types and list lengths), versions vs core and
+  placeholder parity across locales.
+- **Verified**: `npm run build -w @nutribio/web` (i18n + legal checks, strict
+  TS, build); `typecheck` for `@nutribio/core`, `@nutribio/db` and
+  `@nutribio/api` green. Bundle: entry 537.19 → 541.60 kB (+4.41 kB, +1.06 kB
+  gzip); the legal texts are 7 separate lazy chunks (14.76–17.75 kB, en-GB
+  included) and the Gemini SDK chunk is unchanged (394.07 kB), so no legal
+  text or SDK code is in the first load. Browser (dev server): Welcome links
+  open the reader in the active language (pt-PT), switching to de then opening
+  shows the German text, back returns to Welcome, Settings section opens and
+  returns, onboarding and Dados save **without a name** (profile `name: ''`,
+  greeting without comma), no horizontal overflow at 390×844 or 1440×900, and
+  no request to Gemini/Supabase/API.
+- **Pending**: owner + lawyer review (checkpoint 5.2), replacement of the
+  `[...]` placeholders, Stripe Checkout links (Wave 7), consent gate (5.3).
+
 ## 2026-11-06 — Nuxt API skeleton: auth, CRUD, export & account deletion (roadmap item 4, phase 4.4, Wave 6)
 
 The backend now has its API. New workspace **`apps/api` (`@nutribio/api`)** — a

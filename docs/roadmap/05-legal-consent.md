@@ -1,6 +1,7 @@
 # 05 — Terms, privacy & consent (RGPD / LGPD / UK GDPR)
 
-**Status:** ◐ In progress (2026-10-06 — first minimization change landed)
+**Status:** ◐ In progress (2026-11-06 — 5.1 data inventory/RoPA/DPIA and 5.2
+texts v1 + in-app reader done; **owner + lawyer review open**, blocks go-live)
 
 > Not legal advice. The texts drafted here are engineering baselines and
 > **must be reviewed by a lawyer** before real user data reaches the server.
@@ -72,6 +73,10 @@ obligation (tax records — via MoR) · legitimate interest (security).
 - 2026-10-06 — Explicit, separate, unticked consent for health data; 18+;
   no analytics → no cookie banner. (DECISIONS #29)
 - 2026-10-06 — Gemini paid tier mandatory before go-live. (DECISIONS #29)
+- 2026-11-06 — Profile name is optional (minimization). (DECISIONS #46)
+- 2026-11-06 — Legal texts v1: typed blocks in the web app, versions in
+  `@nutribio/core`, target-service scope, visible placeholders for owner data,
+  reader reachable from Welcome/Settings. (DECISIONS #47)
 
 ## Open questions
 
@@ -79,18 +84,30 @@ obligation (tax records — via MoR) · legitimate interest (security).
 - [ ] Retention for inactive accounts (e.g., delete after N months).
 - [ ] Lawyer confirmation on international transfers (SCCs/DPF/LGPD art. 33).
 - [ ] Final review of all 7 language versions by a lawyer.
+- [ ] Replace the visible placeholders (`[CONTROLLER_NAME]`,
+      `[CONTROLLER_ADDRESS]`, `[CONTACT_EMAIL]`, `[RETENTION_PERIOD]`,
+      `[TRANSFER_NOTE]`, `[COMPLAINT_AUTHORITY]`) before go-live — see
+      `docs/legal/README.md`.
+- [ ] 18+ gate in onboarding (prerequisite of 5.3; the texts already state 18+).
+- [ ] Rewrite the Welcome "data stays on this device" copy with the data layer
+      (4.6) — the texts describe the target service.
 
 ## Phases
 
 ### 5.1 Data inventory + minimization
-- [ ] `docs/legal/` — data inventory, RoPA, DPIA-lite.
+- [x] `docs/legal/` — data inventory, RoPA, DPIA-lite (2026-11-06:
+      `data-inventory.md`, `ropa.md`, `dpia-lite.md`, `README.md`).
 - [x] Code: remove `name` from the Gemini prompt. (Done 2026-10-06 with the prompt rewrite — the name is no longer sent to Gemini.)
+- [x] Code: `Profile.name` optional (onboarding + Dados no longer require it;
+      labels say "(optional)" in the 7 catalogs). DECISIONS #46.
 
 ### 5.2 Texts
-- [ ] Terms of Use, Privacy Policy, health-data consent text, health
-      disclaimer — `en-GB` source + 6 translations, versioned (`v1`).
-- [ ] Rendered in-app (markdown) + linked from Welcome/Settings/Stripe
-      Checkout.
+- [x] Terms of Use, Privacy Policy, health-data consent text, health
+      disclaimer — `en-GB` source + 6 translations, versioned (`v1`)
+      (`apps/web/src/legal/`, versions in `packages/core/src/legal.ts`).
+- [x] Rendered in-app (typed blocks, no Markdown) + linked from
+      Welcome/Settings.
+- [ ] Linked from Stripe Checkout → Wave 7 (item 3).
 - [ ] **Checkpoint: owner + lawyer review.**
 
 ### 5.3 Consent gate
@@ -134,3 +151,19 @@ obligation (tax records — via MoR) · legitimate interest (security).
   (`GET /api/account/export`) and account deletion (`DELETE /api/account`,
   Admin API + cascade). The Settings UI, the Stripe customer handling and the
   consent guard (5.3) are still pending.
+
+- 2026-11-06 — Phases 5.1 and 5.2 (Wave 6). **5.1**: `docs/legal/` created
+  (data inventory per field with legal basis/sensitivity/Gemini exposure,
+  RoPA, DPIA-lite with risks R1–R10, README with the go-live checklist);
+  `Profile.name` made optional (DECISIONS #46) and the inventory recorded the
+  remaining gaps (18+ gate, plaintext key until 4.6, Welcome copy until 4.6).
+  **5.2**: four documents (Terms, Privacy, health-data consent, health
+  disclaimer) as typed blocks in 7 locales (`apps/web/src/legal/`, all lazy),
+  versions in `packages/core/src/legal.ts` (DECISIONS #47), reader
+  `LegalDocumentView` overlaying any screen, links from the Welcome privacy
+  card and a new "Legal documents" section in Settings, `i18n:check` extended
+  with legal structure parity. Verified: build + core/db/api typechecks,
+  browser flows (pt-PT/de, back navigation, name-less onboarding and Dados,
+  390×844 / 1440×900), no Gemini/API requests; entry bundle +4.41 kB
+  (+1.06 kB gzip), legal texts in lazy chunks. **Checkpoint owner + lawyer
+  review remains open** — it blocks go-live, as do the visible placeholders.

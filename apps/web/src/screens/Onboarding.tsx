@@ -156,7 +156,6 @@ export function Onboarding({onDone, onBack}: {onDone: () => void; onBack?: () =>
 
   const basicValid = useMemo(
     () =>
-      form.name.trim().length > 0 &&
       form.age !== '' &&
       form.age > 0 &&
       form.height !== '' &&

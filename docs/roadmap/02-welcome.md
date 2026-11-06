@@ -71,7 +71,8 @@ explains the app's purpose and how it works, like an in-app landing page.
 - [ ] "Já tenho conta" CTA + login (Wave 6, item 4.5 — **email + password**;
       Google/SSO deferred to the end of the project, DECISIONS #42).
 - [ ] Pricing teaser (Item 3).
-- [ ] Links to the legal documents (Item 5, phase 5.2).
+- [x] Links to the legal documents (Item 5, phase 5.2 — Terms, Privacy and
+      Health disclaimer open the in-app reader).
 
 ## Verification
 
@@ -91,3 +92,6 @@ explains the app's purpose and how it works, like an in-app landing page.
   `App.tsx` gate (`Welcome → Onboarding → Shell`, first use only), onboarding
   "Voltar" to Welcome, 32 new i18n keys × 7 locales, docs updated. Deferred:
   auth CTA, pricing teaser, legal links (see 2.3).
+- 2026-11-06 — 2.3 legal links delivered with roadmap 5.2: the privacy card
+  now opens the Terms of Use, Privacy Policy and Health disclaimer in the
+  in-app legal reader (`onOpenLegal` prop → `legalDoc` branch in `App.tsx`).

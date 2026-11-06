@@ -755,3 +755,56 @@ empty and the suite fails with an explicit message. The setting is local-only:
 `supabase config diff` against production still reports only the 4 deferred
 email-template subjects. `API_TEST_SKIP_BUILD=1` reuses the last build while
 iterating. The suite is not part of CI yet (no API deploy before 4.8).
+
+#46. 2026-11-06 — Profile name is optional (data minimization)
+**Context:** Roadmap 5.1 (data inventory + minimization) lists the name as
+optional (DECISIONS #29 minimization), but onboarding and the Dados form
+required it, so every user had to give personal data the product does not
+need — the name is only used for the greeting and is never sent to Gemini.
+**Decision:** `Profile.name` is **optional** (empty string allowed). The web
+validation (`Onboarding`, `EditData`) no longer requires it and the labels say
+"(optional)" in the 7 catalogs. No API change was needed: `PUT /api/profile`
+already accepts `z.string().max(60)` and the column defaults to `''`.
+**Consequences:** The first-run flow and the Dados form save without a name;
+the Today greeting omits the comma when the name is empty; every profile write
+still carries the field (the whole-profile rule of #11/#26/#32). The name
+remains local/server-side only and is still absent from the Gemini prompt.
+
+#47. 2026-11-06 — Legal texts v1: typed blocks in the web app, versions in core, target-service scope, visible placeholders
+**Context:** Roadmap 5.2 requires Terms of Use, Privacy Policy, health-data
+consent and health disclaimer in 7 locales, rendered in-app and linked from
+Welcome/Settings, with versions that the consent gate (5.3) can record in
+`app.consents`. The owner had to choose the format, the scope of v1 and how to
+handle data that only the owner can provide.
+**Decision:**
+- **Typed blocks, not Markdown.** Each text is data
+  (`heading | paragraph | list | note`) in `apps/web/src/legal/<locale>.ts`,
+  one module per locale, **all lazy-loaded** (including en-GB) with an en-GB
+  fallback. No Markdown dependency, no dynamic HTML/sanitizer, and no legal
+  text in the entry bundle.
+- **Versions live in `packages/core/src/legal.ts`**:
+  `LEGAL_DOCUMENT_VERSIONS`, `CONSENT_DOCUMENT_IDS`/`_VERSIONS`/`_SOURCES` and
+  `LEGAL_TEXTS_APPROVED`. `packages/db` now derives its `consents.document`
+  CHECK values from the same constant, so the API (5.3) records exactly the
+  versions the web app shows. Bumping a version is what forces re-consent.
+- **v1 describes the target service** (account, EU database, server-side AI
+  generation), not the local-only app, so the 5.3 consent does not need a v2
+  at go-live. Until the review is signed off, the reader shows a
+  "pre-launch / pending legal review" note driven by `LEGAL_TEXTS_APPROVED =
+  false` (flipping it does not change the texts or the versions).
+- **Missing owner data is shown as visible placeholders**
+  (`[CONTROLLER_NAME]`, `[CONTROLLER_ADDRESS]`, `[CONTACT_EMAIL]`,
+  `[RETENTION_PERIOD]`, `[TRANSFER_NOTE]`, `[COMPLAINT_AUTHORITY]`); the
+  owner + lawyer checkpoint blocks go-live until none remain.
+- Rendered by `components/LegalDocumentView.tsx` through a `legalDoc` state
+  branch in `App.tsx` (overlays Welcome, Onboarding, Settings and the shell);
+  reachable from the Welcome privacy card and a new "Legal documents" section
+  in Settings.
+- `npm run i18n:check` now also verifies legal parity: same documents, same
+  block structure (types and list lengths), versions equal to core and the
+  same placeholders across the 7 locales.
+**Consequences:** Texts are an engineering baseline, not legal advice (owner +
+lawyer review is the blocking checkpoint). The Stripe Checkout links arrive
+with Wave 7 (item 3). Terms need a v2 when subscriptions and the withdrawal
+right become effective in the product. es/fr/de/it remain agent translations
+pending native review, like the UI catalogs.
