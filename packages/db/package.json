@@ -1,0 +1,39 @@
+{
+  "name": "@nutribio/db",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./client": "./src/client.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset",
+    "db:generate": "drizzle-kit generate",
+    "db:custom": "drizzle-kit generate --custom",
+    "db:check": "drizzle-kit check",
+    "db:link": "supabase link",
+    "db:push": "supabase db push",
+    "config:push": "supabase config push",
+    "db:verify": "docker exec -i supabase_db_nutribio psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/tests/verify_phase_4_3.sql",
+    "email:verify": "bash supabase/tests/verify_emails.sh",
+    "email:build": "node scripts/build_email_templates.mjs"
+  },
+  "dependencies": {
+    "@nutribio/core": "*",
+    "drizzle-orm": "0.45.4",
+    "postgres": "4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "drizzle-kit": "0.31.11",
+    "supabase": "2.122.0",
+    "typescript": "~5.8.3"
+  }
+}

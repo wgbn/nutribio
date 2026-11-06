@@ -1,6 +1,8 @@
 # 04 — Backend & storage (Nuxt API + Supabase)
 
-**Status:** ◐ In progress (2026-11-06 — 4.1 monorepo + 4.2 `packages/core` done; 4.3+ pending owner dependencies)
+**Status:** ◐ In progress — **3 of 9 phases done** (2026-11-06: 4.1 monorepo,
+4.2 `packages/core`, 4.3 Supabase live in production). 4.4–4.9 pending;
+template push + SMTP carried to go-live (4.8).
 
 **Note:** this item **supersedes DECISIONS #1** (100% frontend, no backend).
 The decision was taken explicitly by the owner on 2026-10-06 (DECISIONS #22).
@@ -96,20 +98,39 @@ DECISIONS #3 and #13).
   confirmation & recovery); 18+. (DECISIONS #24)
 - 2026-10-06 — Offline model: DB source of truth + `nutribio.v2` cache with
   sync marker. (DECISIONS #28)
+- 2026-11-06 — Wave 6 starts with 4.3 (before the legal texts); no user data
+  reaches the server until 5.3/4.6. (DECISIONS #36)
+- 2026-11-06 — DB layer: Drizzle schema as source, drizzle-kit → Supabase CLI
+  migrations, private `app` schema, `nutribio_api` role, RLS without policies.
+  (DECISIONS #37)
+- 2026-11-06 — One hosted project (production) on the Free plan + local Docker
+  stack for development; Pro before go-live. (DECISIONS #38)
+- 2026-11-06 — Auth emails localized via `user_metadata.locale`; Brevo SMTP
+  deferred until a domain exists. (DECISIONS #39)
+- 2026-11-06 — API verifies access tokens through JWKS (ES256 asymmetric
+  keys). (DECISIONS #40)
+- 2026-11-06 — **Auth v1 without SSO:** email + password + OTP only; Google
+  OAuth (and any other provider) deferred to the end of the project, provider
+  disabled in `config.toml`/production. (DECISIONS #42)
 
 ## Open questions
 
-- [ ] Drizzle vs supabase-js server client (debate at 4.3).
+- [x] Drizzle vs supabase-js server client → **Drizzle** (DECISIONS #37).
 - [ ] VPS vs Railway/Fly/Render (4.8).
 - [ ] Web Push notifications for finished generations (later).
 - [ ] Rate limits & quotas per endpoint.
 - [ ] Multi-device conflicts (last-write-wins is fine for v1?).
+- [ ] Import the existing `nutribio.v1` local data into the new account when
+      the user signs up (one-off migration in 4.6)? Recommended: yes, offer it
+      once, then clear the local namespace.
 - [ ] Server-side `Translate` for the prompt labels (4.7): core does not ship
       catalogs, so the API needs an implementation for the domain labels
       (meal/goal/sex/frequency/…) used in the prompt. Options: ship the label
       subset of the catalogs in core, or have the API import the web catalogs.
 - [ ] Where the `@google/genai` dependency lives once the API generates plans
       (4.6/4.7): core stays dependency-free, so the SDK call moves to `apps/api`.
+- [ ] Localized notification emails (`password_changed`, `email_changed`):
+      still Supabase defaults (English). Decide with 5.2/5.3.
 
 ## Phases
 
@@ -142,11 +163,45 @@ DECISIONS #3 and #13).
 - [x] Docs: ARCHITECTURE §3.1, DECISIONS #35, CHANGELOG.
 
 ### 4.3 Supabase project (EU) + migrations + RLS + Auth providers/OTP email
-      templates (7 languages) + SMTP.
+      templates (7 languages) + SMTP — ☑ 2026-11-06
+      (template push + SMTP carried to go-live; Google/SSO deferred, #42)
+- [x] `packages/db` workspace: Drizzle schema (`app` schema, 9 tables),
+      `drizzle.config.ts` writing to `supabase/migrations`
+      (`prefix: 'supabase'`), `createDb()` factory for the API.
+- [x] Initial migration (tables, checks, indexes, RLS enabled) + custom
+      `api_role_and_grants` migration (role `nutribio_api`, `auth.users` FKs
+      with cascade, `updated_at` triggers, grants/revokes).
+- [x] `supabase/config.toml`: local stack, Auth settings (site URL, redirects,
+      confirmations, OTP 6/900 s, password policy, rate limit), Google
+      provider via `env()`, `[remotes.production]` block.
+- [x] OTP email templates in 7 languages generated from one strings file
+      (`email:build`), branching on `user_metadata.locale` with en-GB
+      fallback.
+- [x] Local verification suites: `db:verify` (RLS/grants/cascade/constraints/
+      triggers) and `email:verify` (7 localized OTP emails + verify + recover).
+- [x] `.gitignore` protects `.env*`; `packages/db/.env.example` documents the
+      variables.
+- [x] Owner guide `docs/SUPABASE_SETUP.md` (project, JWT keys, CLI link,
+      `db:push`, API role password, Auth config, Brevo SMTP, Free-plan caveats,
+      Google OAuth — deferred, DECISIONS #42).
+- [x] **Owner:** create the hosted project (`nutribio`, eu-west-1, Free) and
+      migrate to asymmetric JWT keys, `supabase login` + `db:link`.
+- [x] **Owner:** `db:push` (both migrations applied + verified remotely), the
+      `nutribio_api` password set and its pooler login tested, real project ref
+      in `[remotes.production]`, `config:push` of the Free-plan-safe Auth
+      settings (site URL, redirects, OTP 6/900 s, password policy, MFA).
+- [ ] **Carried to go-live (4.8), not part of 4.3 completion:** Google OAuth
+      client (redirect URIs prod + local), credentials in `packages/db/.env`,
+      `enabled = true` and `config:push` — DECISIONS #42. Not a launch
+      dependency.
+- [ ] **Carried to go-live (4.8), not part of 4.3 completion:** Brevo SMTP with
+      an authenticated domain — also the only way to push the 4 localized
+      templates on the Free plan (DECISIONS #41); Pro plan.
 ### 4.4 Nuxt API skeleton: JWT middleware, CORS, error codes, health; CRUD for
       profile/bio/history; account export/delete (with Item 5).
-### 4.5 Web auth UI: login/signup/OTP/recovery/Google; session; App gate
-      `Welcome → Auth → Consent → Onboarding → Shell`.
+### 4.5 Web auth UI: signup/login/OTP/recovery (email + password); session;
+      App gate `Welcome → Auth → Consent → Onboarding → Shell`
+      (Google/SSO deferred to the end, DECISIONS #42).
 ### 4.6 Web data layer: `useStore` on the API + `nutribio.v2` cache/sync
       markers; remove client-side Gemini.
 ### 4.7 Background generation worker + polling + feedback changes.
@@ -163,6 +218,8 @@ DECISIONS #3 and #13).
 - Chunk layout: no Gemini SDK in the web bundle after 4.6.
 - End-to-end: signup → consent → onboarding → generation → close app →
   reopen → plan ready.
+- 4.3 (done locally): `npm run db:verify` + `npm run email:verify`
+  (`packages/db/supabase/tests/`).
 
 ## Progress log
 
@@ -180,3 +237,25 @@ DECISIONS #3 and #13).
   before/after the move are byte-identical (prompt per locale, inputs hash,
   targets, normalization, shopping); build + browser checks green.
   DECISIONS #35. Wave 5 complete.
+- 2026-11-06 — Phase 4.3 (Wave 6, code side): `packages/db` (`@nutribio/db`)
+  with the Drizzle schema for the private `app` schema (profiles,
+  profile_history, bio_records, plans, dishes, plan_shopping_items,
+  plan_selections, shopping_checks, consents), drizzle-kit → Supabase CLI
+  migration workflow, `api_role_and_grants` custom migration (role, auth FKs,
+  triggers, grants), `supabase/config.toml` (local + Auth + Google +
+  `remotes.production`) and 7-locale OTP email templates generated from one
+  strings file. Verified on the local Docker stack: migrations apply from
+  scratch, RLS/grants/cascade/constraints/triggers checks pass, 7/7 localized
+  emails (body + subject + 6-digit OTP) via Mailpit, `verify` returns a
+  session, `recover` localized, REST cannot reach `app`, web bundle unchanged.
+  DECISIONS #36–#40. Remaining: the owner actions (hosted project, link,
+  push, API role password, Google OAuth) in `docs/SUPABASE_SETUP.md`.
+- 2026-11-06 — Phase 4.3 (owner steps): hosted project `nutribio`
+  (`tsmcdeynuzdbnluqdbmw`, eu-west-1, Free) created with ES256 keys, CLI
+  linked, both migrations pushed and verified remotely, `nutribio_api`
+  password set (stored in `packages/db/.env`, pooler login tested) and the
+  Free-plan-safe Auth settings pushed. Found a Free-tier limitation: email
+  templates cannot be modified with the default email provider, so the 4
+  localized templates are pushed at go-live (Brevo SMTP or Pro). Google OAuth
+  deferred to the end (DECISIONS #42). DECISIONS #41. **Phase 4.3 closed**
+  (template push + SMTP + Google are carried to 4.8 / post-launch).

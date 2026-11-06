@@ -515,3 +515,148 @@ paths and formatting). The prompt/schema code stays in the lazy `gemini`
 chunk (not in the main bundle). The API (4.7) will need a `Translate`
 implementation for the domain labels used in the prompt — decided then
 (core does not ship catalogs).
+
+#36. 2026-11-06 — Wave 6 order changed: phase 4.3 (Supabase) before the legal texts
+**Context:** The roadmap's Wave 6 starts with Item 5 phases 5.1–5.2 (data
+inventory + legal texts) precisely because no real user data may reach a
+server before those texts exist. The owner asked to start Wave 6 with Item 4.
+**Decision:** Execute **4.3 (Supabase project + schema + Auth config) first**,
+then 5.1–5.2 (legal texts), then 4.4 onwards. 4.3 only creates infrastructure
+and an empty database: the web app keeps writing exclusively to `localStorage`
+(`nutribio.v1`) and no user data is stored server-side until the consent gate
+(5.3) and the data layer (4.6) land.
+**Consequences:** DECISIONS #29 stays intact — real data reaching the server is
+still gated by the legal texts, the lawyer review and the consent gate. The
+roadmap README/`04-backend-storage.md` record the new order; the "no backend"
+constraint in `AGENTS.md` still describes the shipped app until 4.8.
+
+#37. 2026-11-06 — Database layer: Drizzle schema as source of truth, applied by the Supabase CLI, private `app` schema
+**Context:** Roadmap 4.3 left the "Drizzle vs supabase-js server client"
+question open. The API needs typed queries and real transactions (the worker
+claims jobs with `FOR UPDATE SKIP LOCKED`), while the project needs
+reproducible SQL migrations for RLS, grants, triggers and FKs to `auth.users`.
+**Decision:** New workspace **`packages/db` (`@nutribio/db`)**:
+- **Drizzle ORM (0.45.x) is the single schema definition.** `drizzle-kit
+  generate` writes SQL into `supabase/migrations` (`migrations.prefix =
+  'supabase'`, drizzle snapshot in `meta/`); the **Supabase CLI is the only
+  tool that applies migrations** (`db reset` locally, `db push` on the hosted
+  project). Drizzle stays on the 0.x stable line (1.0 beta changes the
+  migration layout and breaks Supabase CLI compatibility).
+- All tables live in the **private `app` schema**, which is *not* in the Data
+  API exposed schemas (`public`/`graphql_public`) and
+  `api.auto_expose_new_tables = false`.
+- **RLS enabled on every table with no policies** (defense in depth), client
+  roles (`anon`, `authenticated`) have **no privileges** on `app`, and the API
+  connects as its own **`nutribio_api`** role (`login bypassrls noinherit`).
+  Its password is set once per environment (`alter role … with password`),
+  never stored in the repository. If a project does not allow granting
+  `BYPASSRLS`, the migration falls back to per-table `api_all` policies for
+  that role only (the API keeps working; tables added later would then need a
+  policy — the migration emits a NOTICE when this path is taken).
+- Enum-like columns are `text` + CHECK constraints (not pg enums) so adding a
+  value is a normal migration; values mirror the `@nutribio/core` unions.
+- **`auth.users` is not modelled in Drizzle**: `user_id` foreign keys
+  (`on delete cascade`, account deletion = Item 5.4) are added in the custom
+  `api_role_and_grants` migration, together with the role, grants and
+  `updated_at` triggers.
+- The package also exports `createDb(connectionString)` (postgres.js, `prepare:
+  false`) for `apps/api`; `apps/web` never imports it.
+**Consequences:** One schema language for the API and the migrations, and SQL
+review stays possible (the generated files are committed). `drizzle-kit
+generate` never inspects the live database, so the manual FKs/role/grants are
+safe from drift; `drizzle-kit push` is not part of the workflow.
+
+#38. 2026-11-06 — One hosted Supabase project (production) on the Free plan + local Docker stack
+**Context:** The owner has no Supabase project yet and does not want two
+hosted environments at this stage.
+**Decision:** A single hosted project named `nutribio` is the **production**
+project, created on the **Free plan**. It was created in **`eu-west-1`
+(Ireland)** — the owner's choice among the EU regions; either `eu-central-1`
+or `eu-west-1` is acceptable (data stays in the EU). Development uses the
+**Supabase CLI local stack** (Docker: Postgres, Auth, Studio, Mailpit), so no
+second hosted project exists. `supabase/config.toml` holds the local values
+plus a `[remotes.production]` block (project ref + production Auth URLs) used
+by `config push`.
+**Consequences:** Free plan pauses after a week of inactivity, has no backups
+and **cannot edit auth email templates** (see #41) — acceptable while there are
+no real users, and the **Pro upgrade is a go-live requirement** (launch
+checklist, 4.8). Because the only hosted project is production, every remote
+command (`db push`, `config push`) is run and reviewed by the owner, never
+automatically by an agent/CI.
+
+#39. 2026-11-06 — Auth emails localized through `user_metadata.locale`; SMTP (Brevo) deferred until a domain exists
+**Context:** DECISIONS #24 requires the signup/recovery OTP emails in 7
+languages; the owner has no domain yet, so a custom SMTP sender cannot be
+authenticated.
+**Decision:** The four transactional templates (confirmation, recovery, email
+change, reauthentication) are **generated from one strings file**
+(`packages/db/email/strings.mjs`) by `npm run email:build`, and branch on
+`{{ .Data.locale }}` — the `user_metadata.locale` the web app sends at
+signup/OTP calls — with **en-GB fallback** (Google sign-ins have no locale
+metadata). They are pushed with `supabase config push` (CLI ≥ 2.108 supports
+template files). OTP: 6 digits, 15-minute expiry; passwords: min 8 chars with
+letters and digits; email confirmation on. **SMTP provider chosen: Brevo (EU
+company, EU data processing)**; until a domain exists, development uses the
+local Mailpit and the hosted project keeps Supabase's built-in SMTP (team
+members only).
+**Consequences:** Real signups are impossible until the domain + Brevo SMTP +
+deliverability are configured — a go-live blocker, not a development one. The
+locale metadata must be sent by the web app from phase 4.5 onwards; templates
+must be regenerated (`email:build`) whenever the copy changes.
+
+#40. 2026-11-06 — Supabase access tokens verified through JWKS (asymmetric keys)
+**Context:** The API must authenticate every request; a shared JWT secret on
+the API host is a long-lived credential that can mint tokens.
+**Decision:** The hosted project uses **asymmetric JWT signing keys (ES256)**;
+the Nuxt API verifies access tokens against the public JWKS
+(`/auth/v1/.well-known/jwks.json`) instead of sharing the JWT secret.
+**Consequences:** Key rotation is transparent (the API caches the JWKS and
+refetches on an unknown `kid`); the secret key stays server-side for admin
+calls only (account deletion). Setup step in `docs/SUPABASE_SETUP.md` A2.
+
+#41. 2026-11-06 — Production Supabase project provisioned; auth templates blocked on the Free plan
+**Context:** Phase 4.3 owner steps were executed against the hosted project
+`nutribio` (`tsmcdeynuzdbnluqdbmw`, `eu-west-1`, Free): ES256 keys, CLI login +
+link, `db push`, `nutribio_api` password, `config push`. The push failed on the
+email templates with *"Email template modification is not available for free
+tier projects using the default email provider. Please upgrade your plan or
+configure a custom SMTP provider."*
+**Decision:**
+- The schema is applied to production and verified there (9 `app` tables with
+  RLS, no client grants, `nutribio_api` with `bypassrls`, 0 policies).
+- The API role password is generated by the agent and stored **only** in
+  `packages/db/.env` (gitignored) as `NUTRIBIO_API_DATABASE_URL`; the owner
+  keeps it in the password manager. It connects through the **session pooler**
+  (`aws-0-eu-west-1.pooler.supabase.com:5432`, user `nutribio_api.<ref>`)
+  because the direct host `db.<ref>.supabase.co` is IPv6-only on Free.
+- `config push` is applied in **two stages**: the Free-plan-safe Auth settings
+  now (site URL, redirects, OTP 6/900 s, password policy, secure password
+  change, MFA defaults), and the **localized templates later** — after Brevo
+  SMTP (A7) or the Pro plan (A8) — with the same command.
+- The Google provider stays `enabled = false` until the OAuth client exists;
+  its credentials live in `packages/db/.env` (`env()` refs in `config.toml`).
+**Consequences:** `supabase config diff` is expected to show exactly 4
+template subjects + 3 Google fields until go-live — that is the documented
+pending state, not drift. Templates must not be removed from `config.toml`
+(they are the source of truth); the push is staged by temporarily excluding
+them, never by deleting them from the repository.
+
+#42. 2026-11-06 — Auth v1: email + password + OTP only; Google OAuth (and any SSO) deferred to the end
+**Context:** DECISIONS #24 listed Google OAuth alongside email/password. The
+owner wants the whole app finished first with traditional email/password login
+and to add SSO later, when it is actually needed.
+**Decision:** v1 authentication is **email + password + 6-digit email OTP**
+(signup confirmation, recovery, reauthentication) on Supabase Auth. **No OAuth
+provider is enabled**: `[auth.external.google]` stays in `config.toml` with
+`enabled = false` (and its credentials as `env()` refs), production matches,
+and `supabase config diff` is clean apart from the deferred email templates.
+The web auth UI (4.5) therefore has no "continue with Google" button — the
+Welcome "Já tenho conta" CTA leads to the email login, and signup goes
+Welcome → Auth → Consent → Onboarding.
+**Consequences:** DECISIONS #24 remains valid except the "Google now" part.
+The Google Cloud project, consent screen and OAuth client are **not** launch
+dependencies any more (they become a post-launch task: fill the two variables
+in `packages/db/.env`, flip `enabled` to true, `config push`, add the button —
+no schema or API change). Existing email accounts are unaffected when SSO
+arrives; the same address can be linked to the provider then.
+

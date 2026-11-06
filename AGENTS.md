@@ -6,9 +6,10 @@ frontend, no backend; all state lives in `localStorage` (namespace `nutribio.v1`
 UI language: Portuguese (PT-PT). Code/identifiers/comments: English.
 
 > **Monorepo (roadmap 4.1, DECISIONS #34):** the repo is an npm-workspaces
-> monorepo — `apps/web` holds the shipped PWA (Vite, GitHub Pages) and
-> `packages/core` holds the shared pure logic (roadmap 4.2). `apps/api` (Nuxt)
-> arrives with roadmap 4.4.
+> monorepo — `apps/web` holds the shipped PWA (Vite, GitHub Pages),
+> `packages/core` holds the shared pure logic (roadmap 4.2) and `packages/db`
+> holds the database schema + Supabase config (roadmap 4.3, DECISIONS #37).
+> `apps/api` (Nuxt) arrives with roadmap 4.4.
 
 > **2026-10 roadmap:** the 2026-10-06 decisions (#21–#30 in `docs/DECISIONS.md`)
 > approve a backend/payment era (Nuxt API + Supabase, Stripe, 7 locales,
@@ -46,6 +47,9 @@ The most critical ones:
 
 1. **No backend, no database, no sync** — data is intentionally single-device
    (localStorage). Do not add a server, accounts, or sync.
+   *(Backend era: the database schema/Auth config exists in `packages/db`
+   since roadmap 4.3, but the web app must keep writing only to `localStorage`
+   until the consent gate 5.3 and the data layer 4.6 land — DECISIONS #36.)*
 2. **Gemini API key lives ONLY in the Settings screen → localStorage.**
    Never bake it into the bundle or read it from env vars in production
    (the user explicitly rejected env vars because they are extractable from
@@ -76,6 +80,16 @@ workspace (there are no app scripts in the root `package.json`).
 - `npm run i18n:check -w @nutribio/web` — verify key parity + interpolation placeholders across all 7 locale catalogs
 - `npm run icons -w @nutribio/web` — regenerate PWA icons (Python + PIL, `apps/web/scripts/generate_icons.py`)
 
+Database / Supabase (`packages/db`, roadmap 4.3 — see `docs/SUPABASE_SETUP.md`):
+
+- `npm run db:start|db:stop|db:status|db:reset -w @nutribio/db` — local Supabase stack (Docker: Postgres 54322, API 54321, Studio 54323, Mailpit 54324)
+- `npm run db:generate -w @nutribio/db` — Drizzle → new SQL in `packages/db/supabase/migrations` (the schema in `packages/db/src/schema` is the source of truth)
+- `npm run db:custom -- --name=<x> -w @nutribio/db` — empty custom migration (roles, grants, triggers, `auth.users` FKs)
+- `npm run db:check|typecheck -w @nutribio/db` — migration consistency / strict TS
+- `npm run db:verify|email:verify -w @nutribio/db` — local DB assertions and 7-locale OTP email checks (require the local stack)
+- `npm run email:build -w @nutribio/db` — regenerate `supabase/templates/*.html` from `email/strings.mjs`
+- `npm run db:link|db:push|config:push -w @nutribio/db` — **owner-only** commands against the hosted project (never run them unattended)
+
 ## Hard rules for `packages/core`
 
 - No runtime dependencies, no DOM/Node globals (tsconfig has `lib: ES2022`,
@@ -90,6 +104,7 @@ workspace (there are no app scripts in the root `package.json`).
 |---|---|
 | `apps/web/` | the shipped PWA (Vite root: `index.html`, `vite.config.ts`, `public/`, `scripts/`) |
 | `packages/core/` | `@nutribio/core` — pure shared logic (no deps, no DOM): types, locales, countries, calculations, meal slots/plan, shopping, hash, prompt, JSON schema, normalizers |
+| `packages/db/` | `@nutribio/db` — database layer (roadmap 4.3): Drizzle schema for the private `app` schema, `createDb()` factory (API only), `supabase/config.toml` (local stack + Auth + Google + `remotes.production`), migrations and 7-locale auth email templates |
 | `apps/web/src/i18n/` | i18n runtime + active-locale tracker (`locales.ts`), `Translate` adapter (`translate.ts`) and the 7 catalogs (`catalogs/`) |
 | `packages/core/src/calculations.ts` | BMR (Mifflin-St Jeor + Harris-Benedict), TDEE, calorie ranges, macros, meal split |
 | `packages/core/src/countries.ts` | `SUPPORTED_COUNTRIES` + country names/preselection (drives prompt cuisine) |
@@ -119,6 +134,8 @@ workspace (there are no app scripts in the root `package.json`).
   research, decisions, open questions, phase checklists and progress logs.
   `README.md` holds the status table, execution order and blocking non-code
   dependencies.
+- **`docs/SUPABASE_SETUP.md`** — owner guide for the database/Auth setup
+  (project, JWT keys, CLI link, schema push, Auth config, Google OAuth, SMTP).
 
 ## Verification
 

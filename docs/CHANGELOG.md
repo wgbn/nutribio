@@ -6,6 +6,124 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-11-06 — Roadmap bookkeeping: phase 4.3 closed, carry-overs to go-live
+
+- Phase 4.3 is marked ☑ (code + local verification + production project,
+  migrations, API role and Auth settings). Three items are explicitly
+  **carried to go-live (4.8)** and do not block the phase: pushing the 4
+  localized email templates (needs Brevo SMTP or Pro, DECISIONS #41), Brevo
+  SMTP itself, and the Google OAuth client (deferred, DECISIONS #42).
+- Item 4 status now reads **3/9 phases** (4.1–4.3 done; 4.4–4.9 pending) in
+  `docs/roadmap/04-backend-storage.md` and the roadmap README status table.
+  Wave 6 is therefore **not** complete: it also contains Item 5 phases
+  5.1–5.5 and Item 4 phases 4.4–4.9.
+
+## 2026-11-06 — Auth scope: email + password only, Google OAuth deferred (roadmap 4.3/4.5)
+
+The owner decided to finish the app with traditional email/password login and
+add SSO at the end (DECISIONS #42).
+
+- `[auth.external.google]` is now `enabled = false` in
+  `packages/db/supabase/config.toml` (the block, its `env()` credential
+  references and the `skip_nonce_check` setting stay, so enabling it later is
+  a flag flip + `config push`). Production already had the provider disabled,
+  so `supabase config diff` is now clean except the 4 deferred email templates.
+- Docs updated: DECISIONS #42 (+ #24 cross-reference), ARCHITECTURE §15.5/§15.7
+  and the stack table, `SUPABASE_SETUP.md` (A6 marked deferred with the steps
+  kept for later), roadmap 04 (4.5 scope, decisions, owner checklist, progress
+  log), roadmap README (Google dependency is not a launch blocker),
+  roadmap 02 (Welcome CTA = email login) and roadmap 05 (Google is only a
+  processor once SSO exists).
+- No code change: the auth UI (4.5) will ship without a "continue with Google"
+  button.
+
+## 2026-11-06 — Supabase production project provisioned (roadmap 4.3, owner steps)
+
+The hosted project now exists and the schema + Auth settings are live. Only the
+Google OAuth client and the go-live items (domain, Brevo SMTP, Pro) remain
+(DECISIONS #41; guide in `docs/SUPABASE_SETUP.md`).
+
+- Project **`nutribio`** (`tsmcdeynuzdbnluqdbmw`, **`eu-west-1`**, Free plan),
+  asymmetric **ES256** JWT keys, CLI logged in and linked.
+- `db push` applied both migrations to production; verified remotely: 9 `app`
+  tables with RLS on, no `anon`/`authenticated` grants, `nutribio_api` with
+  `bypassrls` + CRUD, 0 policies, 2 rows in the migration history.
+- **`nutribio_api` password** generated and set; the connection URL lives only
+  in `packages/db/.env` as `NUTRIBIO_API_DATABASE_URL` (gitignored) and the
+  role was proven able to log in through the **session pooler**
+  (`aws-0-eu-west-1.pooler.supabase.com`) — the direct host is IPv6-only.
+- `config push` (two stages, DECISIONS #41): site URL `…github.io/nutribio/`,
+  redirect allow-list, OTP 6/900 s, `max_frequency 1s`, secure password change,
+  min password 8 + letters/digits, MFA back to the Supabase defaults, storage
+  vector off.
+- **Free-plan blocker found:** the Management API rejects email-template
+  changes while the default email provider is in use. The 4 localized templates
+  stay in `config.toml`/`supabase/templates/` and are pushed at go-live (Brevo
+  SMTP or Pro). `supabase config diff` currently shows exactly the 4 template
+  subjects + the 3 Google fields — the documented pending state.
+- `[remotes.production]` now carries the real project ref; `.env.example`
+  documents the pooler/IPv6 constraint. Docs: `SUPABASE_SETUP.md` rewritten
+  with the status table and the remaining steps, ARCHITECTURE §15.5–§15.7,
+  DECISIONS #38 (region) and #41.
+
+## 2026-11-06 — Supabase database + Auth layer (roadmap item 4, phase 4.3, Wave 6)
+
+The backend era gets its database: schema, roles, RLS and the Auth
+configuration now exist in a new `packages/db` workspace. **The shipped app is
+unchanged** — it still writes only to `localStorage`; no user data reaches the
+server until the consent gate (5.3) and the data layer (4.6). Decisions
+#36–#40.
+
+- New workspace **`packages/db` (`@nutribio/db`)** — Drizzle schema (single
+  source of truth) + Supabase CLI config, consumed only by the future API.
+  Pinned: `drizzle-orm` 0.45.4, `drizzle-kit` 0.31.11, `postgres` 4.0.0,
+  `supabase` CLI 2.122.0.
+- **Schema** (`app` schema, 9 tables): `profiles`, `profile_history`,
+  `bio_records`, `plans`, `dishes`, `plan_shopping_items`, `plan_selections`,
+  `shopping_checks`, `consents`. Enum-like columns are `text` + CHECK
+  constraints mirroring the `@nutribio/core` unions; jsonb columns are typed
+  with the core interfaces. Job-queue invariants as partial unique indexes
+  (one `is_current` plan, one `queued|running` job per user).
+- **Migrations**: `drizzle-kit generate` writes SQL into
+  `supabase/migrations` (`prefix: 'supabase'`); the **Supabase CLI applies
+  it** (`db reset` locally, `db push` on the hosted project). A custom
+  migration adds the `nutribio_api` role (login + bypassrls, no password in
+  the repo), the five `auth.users` cascading FKs, the `updated_at` triggers
+  and the grant/revoke set. If a project cannot grant `BYPASSRLS`, the same
+  migration falls back to `api_all` policies for that role (verified locally
+  by forcing the fallback).
+- **Security model**: `app` is not exposed by the Data API
+  (`auto_expose_new_tables = false`), RLS enabled on every table with no
+  policies, `anon`/`authenticated` hold no privileges, the API role owns all
+  access.
+- **Auth config** (`supabase/config.toml`): local site URL + GitHub
+  Pages/loca.lt redirects, email confirmations, 6-digit OTP (15 min), 8-char
+  password policy with letters+digits, Google provider via `env()`, and a
+  `[remotes.production]` block for the hosted project.
+- **Localized transactional emails** (DECISIONS #39): copy for 7 locales in
+  `email/strings.mjs`, `npm run email:build` generates the four Go templates
+  in `supabase/templates/` (confirmation, recovery, email change,
+  reauthentication) which branch on `{{ .Data.locale }}` with en-GB fallback.
+- `.gitignore` now ignores `.env`/`.env.*` (keeping `.env.example`) — the
+  previous rules did not protect environment files.
+- Docs: `docs/SUPABASE_SETUP.md` (owner guide: project, JWT keys, CLI link,
+  schema push, Auth, Google OAuth, Brevo SMTP, Free-plan caveats),
+  ARCHITECTURE §15 (+ §2/§3/§13), DECISIONS #36–#40, roadmap item 4 + README.
+- **Verified** (local stack): `db:start`/`db:reset` apply both migrations;
+  `drizzle-kit check` + `typecheck -w @nutribio/db` green;
+  `npm run db:verify` (RLS on all 9 tables, no client privileges,
+  `nutribio_api` CRUD + bypassrls, unique bio date, one current plan, one
+  active job, 18+/goal CHECKs, `updated_at` trigger, cascade on user
+  deletion); `npm run email:verify` (7/7 locales: correct body + subject +
+  6-digit OTP in Mailpit, `verify` returns a session, `recover` localized from
+  stored metadata); `GET /rest/v1/profiles` → `PGRST205` (schema not
+  exposed); `npm run build -w @nutribio/web` unchanged (same bundle sizes).
+- **Pending (owner):** create the hosted project, link the CLI, `db:push`,
+  set the `nutribio_api` password, `config:push` (after replacing the project
+  ref placeholder) and the Google OAuth client — see
+  `docs/SUPABASE_SETUP.md`. Brevo SMTP and the Pro upgrade wait for a domain /
+  go-live.
+
 ## 2026-11-06 — `packages/core`: shared pure logic extracted (roadmap item 4, phase 4.2)
 
 The domain logic the future Nuxt API must reuse (targets, prompt, schema,

@@ -37,6 +37,12 @@ A task is not complete until its documentation is written.
 > backend/payment era — those decisions take effect per roadmap phase, and
 > the text below is updated when each phase lands. Do not implement a
 > superseding change ahead of its roadmap phase.
+>
+> Since roadmap 4.3 (DECISIONS #36–#40) the database schema and the Supabase
+> Auth configuration exist in `packages/db`, but **no user data reaches the
+> server**: the web app keeps writing only to `localStorage` until the consent
+> gate (5.3) and the data layer (4.6). Hosted-project commands (`db:push`,
+> `config:push`) are owner-run only — never run them unattended.
 
 - No backend, no database, no sync — all data stays in `localStorage`
   (namespace `nutribio.v1`), single-device by design.

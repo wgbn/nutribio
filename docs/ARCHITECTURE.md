@@ -24,8 +24,15 @@ building the 7-day × 5-meal × 3-variations plan with precise gram amounts.
 The generated plan is cached locally; the API is only called when the user
 explicitly confirms a (re)generation.
 
-There is **no backend and no database**. All data lives in `localStorage`
-(namespace `nutribio.v1`) and is intentionally single-device.
+There is **no backend and no database** in the shipped app. All data lives in
+`localStorage` (namespace `nutribio.v1`) and is intentionally single-device.
+
+> **Backend era in progress (DECISIONS #22, #36–#40):** the database schema,
+> roles and Auth configuration already exist in `packages/db` (roadmap 4.3),
+> but the web app still writes exclusively to `localStorage` — no user data
+> reaches the server until the consent gate (5.3) and the data layer (4.6).
+> See §15 for the database/Auth layer and `docs/SUPABASE_SETUP.md` for the
+> owner setup steps.
 
 ## 2. Stack
 
@@ -33,13 +40,15 @@ There is **no backend and no database**. All data lives in `localStorage`
 |---|---|
 | Framework | React 19 |
 | Build | Vite 7 + TypeScript (strict) |
-| Repo layout | npm workspaces: `apps/web` (`@nutribio/web`) + `packages/core` (`@nutribio/core`, source-only, no deps) |
+| Repo layout | npm workspaces: `apps/web` (`@nutribio/web`) + `packages/core` (`@nutribio/core`, source-only, no deps) + `packages/db` (`@nutribio/db`, Drizzle schema + Supabase config) |
 | Styling | Tailwind CSS v4 (`@tailwindcss/vite`) |
 | AI | `@google/genai` ^2.x (lazy-loaded, web only) |
 | Charts | chart.js + react-chartjs-2 |
 | PWA | `vite-plugin-pwa` (generateSW, autoUpdate) |
 | Icons (PNG) | Python + PIL script (`scripts/generate_icons.py`) |
 | i18n | `i18next` + `react-i18next` (26.x) — lazy per-locale catalogs |
+| Database (4.3) | Supabase Postgres (EU) + Drizzle ORM; migrations via Supabase CLI |
+| Auth (4.3) | Supabase Auth (email/password + 6-digit OTP; SSO deferred, DECISIONS #42) |
 | Deployment | GitHub Pages project site (`/nutribio/`) via GitHub Actions |
 | UI language | 7 locales: `pt-PT`, `pt-BR`, `en-GB` (fallback), `es`, `fr`, `de`, `it` · Code language: English |
 
@@ -47,9 +56,10 @@ There is **no backend and no database**. All data lives in `localStorage`
 
 The repo is an **npm-workspaces monorepo** (roadmap 4.1, DECISIONS #34):
 `apps/web` is the shipped PWA (Vite root, GitHub Pages), `packages/core` is the
-shared pure logic (roadmap 4.2, DECISIONS #35) and `apps/api` (Nuxt) arrives
-with roadmap 4.4. App commands are always run per workspace from the root
-(`npm run build -w @nutribio/web`); the root `package.json` only declares
+shared pure logic (roadmap 4.2, DECISIONS #35), `packages/db` is the database
+schema + Supabase config (roadmap 4.3, DECISIONS #37–#40) and `apps/api` (Nuxt)
+arrives with roadmap 4.4. App commands are always run per workspace from the
+root (`npm run build -w @nutribio/web`); the root `package.json` only declares
 `workspaces`.
 
 ```
@@ -60,7 +70,8 @@ nutribio/
 ├── docs/
 │   ├── ARCHITECTURE.md          # this file
 │   ├── CHANGELOG.md             # mandatory change log
-│   └── DECISIONS.md             # decision log (ADR-style)
+│   ├── DECISIONS.md             # decision log (ADR-style)
+│   └── SUPABASE_SETUP.md        # owner guide: project, Auth, OAuth, SMTP
 ├── apps/
 │   └── web/                     # the shipped PWA
 │       ├── package.json         # @nutribio/web — scripts + dependencies
@@ -89,14 +100,28 @@ nutribio/
 │           ├── components/      # TabBar/Sidebar, Field, dialogs, charts, meal cards, icons
 │           └── screens/         # Welcome, Onboarding, Today, Plan, Shopping, Progress, EditData, Settings
 └── packages/
-    └── core/                    # @nutribio/core — pure domain logic (see §3.1)
-        ├── package.json         # no runtime dependencies, source-only exports
-        ├── tsconfig.json        # ES2022 only (no DOM, no Node types)
-        └── src/
-            ├── types.ts, locales.ts, countries.ts, calculations.ts, mealTimes.ts,
-            ├── plan.ts, shopping.ts, hash.ts, errors.ts, format.ts,
-            ├── prompt.ts, schema.ts, normalize.ts
-            └── index.ts         # barrel
+    ├── core/                    # @nutribio/core — pure domain logic (see §3.1)
+    │   ├── package.json         # no runtime dependencies, source-only exports
+    │   ├── tsconfig.json        # ES2022 only (no DOM, no Node types)
+    │   └── src/
+    │       ├── types.ts, locales.ts, countries.ts, calculations.ts, mealTimes.ts,
+    │       ├── plan.ts, shopping.ts, hash.ts, errors.ts, format.ts,
+    │       ├── prompt.ts, schema.ts, normalize.ts
+    │       └── index.ts         # barrel
+    └── db/                      # @nutribio/db — database schema + Supabase (see §15)
+        ├── package.json         # drizzle-orm, postgres; dev: drizzle-kit, supabase CLI
+        ├── drizzle.config.ts    # out: supabase/migrations, prefix 'supabase'
+        ├── .env.example         # documentation only (copy to gitignored .env)
+        ├── src/
+        │   ├── schema/          # app schema tables + values + helpers
+        │   ├── client.ts        # createDb() factory (apps/api only)
+        │   └── index.ts         # barrel
+        ├── email/strings.mjs    # 7-locale auth email copy
+        ├── scripts/build_email_templates.mjs
+        └── supabase/
+            ├── config.toml      # local stack + auth config + remotes.production
+            ├── migrations/      # drizzle-kit SQL + custom SQL (+ meta/ snapshots)
+            └── templates/       # generated auth email HTML (Go templates)
 ```
 
 ### 3.1 `packages/core` boundaries (DECISIONS #35)
@@ -613,6 +638,10 @@ The site is deployed as a GitHub Pages **project site** at
   fallback (no key / invalid key), responsive layouts at 390×844 and
   1440×900, PWA manifest + SW registration in preview.
 - The real Gemini generation path requires a valid API key (user-provided).
+- Database/Auth (phase 4.3), local stack only — see §15.8:
+  `npm run db:verify -w @nutribio/db` (RLS, grants, cascade, constraints,
+  triggers) and `npm run email:verify -w @nutribio/db` (7 localized OTP
+  emails through Mailpit).
 
 ## 14. Known limitations & notes
 
@@ -624,3 +653,165 @@ The site is deployed as a GitHub Pages **project site** at
   discards them (only `generateContent` models are usable anyway).
 - Export/import is a raw JSON dump of all keys; versioned via
   `schemaVersion` for future migrations.
+
+## 15. Database & Auth (Supabase) — roadmap 4.3
+
+The database and the Auth configuration live in **`packages/db`**
+(`@nutribio/db`). The web app does not import it: only the future Nuxt API
+does. Owner setup steps (project, JWT keys, CLI link, SMTP) are
+in [`SUPABASE_SETUP.md`](./SUPABASE_SETUP.md); decisions #36–#40.
+
+### 15.1 Workspace and commands
+
+| Command (from the repo root) | What it does |
+|---|---|
+| `npm run db:start -w @nutribio/db` | Start the local stack (Docker): Postgres 54322, API 54321, Studio 54323, Mailpit 54324 |
+| `npm run db:reset -w @nutribio/db` | Recreate the local DB and re-apply every migration |
+| `npm run db:stop` / `db:status` | Stop the stack / print local URLs and keys |
+| `npm run db:generate -w @nutribio/db` | `drizzle-kit generate` → new SQL in `supabase/migrations` |
+| `npm run db:custom -- --name=<x>` | Empty custom SQL migration (roles, grants, triggers, FKs) |
+| `npm run db:check -w @nutribio/db` | `drizzle-kit check` (migration/snapshot consistency) |
+| `npm run db:link` / `db:push` | Link the hosted project / apply migrations to it (owner) |
+| `npm run config:push -w @nutribio/db` | Push `supabase/config.toml` (Auth settings + email templates) to the hosted project (owner) |
+| `npm run email:build -w @nutribio/db` | Regenerate `supabase/templates/*.html` from `email/strings.mjs` |
+| `npm run db:verify` / `email:verify` | Local verification suites (§15.8) |
+| `npm run typecheck -w @nutribio/db` | Strict TS on the schema/client |
+
+The package is consumed as TypeScript source (`exports` → `./src/*.ts`), like
+`packages/core`. `drizzle-orm`, `postgres`, `drizzle-kit` and the `supabase`
+CLI are pinned exactly (the CLI ≥ 2.108 is required for email templates; the
+drizzle stable 0.x line is required for the `supabase` migration prefix).
+
+### 15.2 Schema (`app` schema)
+
+Nine tables, all in the private `app` schema, all with RLS enabled. Enum-like
+columns are `text` + CHECK constraints whose values mirror the
+`@nutribio/core` unions (`src/schema/values.ts`); `jsonb` columns are typed
+with the core interfaces (`Profile`, `Exercise`, `Supplements`,
+`NutritionTargets`, `Ingredient[]`, `Macros`, `BioRecord`).
+
+| Table | Purpose / key columns |
+|---|---|
+| `profiles` | 1:1 with `auth.users` (PK `user_id`): name, sex, age (18–120), height, initial weight, goal, country, `exercise` jsonb, `supplements` jsonb, `excluded_foods`, `observations`, `locale`, timestamps |
+| `profile_history` | one `snapshot` jsonb per profile change (index `user_id, created_at desc`) |
+| `bio_records` | bioimpedance rows, unique `(user_id, date)` (DECISIONS #10) |
+| `plans` | plan + generation job: `status` (`queued/running/succeeded/failed`), `inputs_hash`, `locale`, `country`, `model`, `targets`/`profile_snapshot`/`biometrics_snapshot` jsonb, `overview`, `error_code`, `attempts`, `is_current`, `queued_at/started_at/heartbeat_at/finished_at/updated_at` |
+| `dishes` | `(plan_id, day, slot, variation_index)` unique; `ingredients` jsonb (with `shoppingKey`/`rawGrams`), `macros` jsonb |
+| `plan_shopping_items` | PK `(plan_id, key)`: name, category, unit/package grams (Item 7) |
+| `plan_selections` | PK `(plan_id, day, slot)`: `selected_index` |
+| `shopping_checks` | PK `(plan_id, key)`: "bought" marks |
+| `consents` | `document` (`terms_privacy/health_data/age_18`), `version`, `locale`, `granted_at`, `withdrawn_at` (Item 5.3) |
+
+Job-queue invariants are enforced by partial unique indexes: **one
+`is_current` plan per user** and **one `queued|running` job per user**, plus
+`plans_status_queued_idx` for the worker claim
+(`FOR UPDATE SKIP LOCKED`, phase 4.7). `dishes` and the plan-scoped tables
+cascade from `plans`; every `user_id` cascades from `auth.users` (account
+deletion, Item 5.4). `updated_at` is maintained by the
+`app.set_updated_at()` trigger on `profiles`, `bio_records`, `plans` and
+`plan_selections`.
+
+`entitlements` / `stripe_events` are **not** created yet (Item 3, Wave 7).
+
+### 15.3 Roles, RLS and grants
+
+- `app` is **not** in the Data API exposed schemas (`public`,
+  `graphql_public`) and `api.auto_expose_new_tables = false`, so the REST/GraphQL
+  endpoints cannot reach it (`GET /rest/v1/profiles` → `PGRST205`).
+- **RLS is enabled on all nine tables with no policies** (DECISIONS #22/#37).
+- The API connects as **`nutribio_api`** (`login bypassrls noinherit`) —
+  created by the `api_role_and_grants` migration without a password; the
+  password is set once per environment with
+  `alter role nutribio_api with password '…'` (never in the repo). If the
+  project refuses `BYPASSRLS` grants, the migration falls back to `api_all`
+  policies for that role only (NOTICE emitted; tables added later would need a
+  policy in that mode).
+- `anon` and `authenticated` have **no privileges** on the schema or its
+  tables (`revoke all`, guarded by role-existence checks so the migrations also
+  run on a plain Postgres).
+- `auth.users` is not modelled in Drizzle: its five foreign keys (cascade) are
+  added in the custom migration, together with the role, grants and triggers.
+
+### 15.4 Migration workflow
+
+1. Edit `packages/db/src/schema/*.ts` (Drizzle is the single source of truth).
+2. `npm run db:generate -w @nutribio/db` → timestamped SQL
+   (`supabase` prefix) + snapshot in `supabase/migrations/meta/` (both
+   committed).
+3. Manual SQL (roles, grants, triggers, `auth.users` FKs):
+   `npm run db:custom -- --name=<x> -w @nutribio/db`.
+4. `npm run db:reset -w @nutribio/db` + `npm run db:verify` locally.
+5. `npm run db:push -w @nutribio/db` on the hosted project (owner reviews the
+   SQL first).
+
+`drizzle-kit push`/`pull` are **not** part of the workflow (the schema is
+generated offline; the Supabase CLI is the only tool that touches a database).
+
+### 15.5 Auth configuration (`supabase/config.toml`)
+
+- Site URL `http://localhost:5173` locally; redirect allow-list
+  `http://localhost:5173`, `https://nbio.loca.lt`,
+  `https://wgbn.github.io/nutribio/`.
+- Email signup on, **confirmations required**, `double_confirm_changes`,
+  `secure_password_change`, **OTP length 6**, **OTP expiry 900 s** (DECISIONS
+  #24), passwords ≥ 8 chars with letters and digits, anonymous sign-ins and
+  phone auth off, refresh-token rotation on.
+- Google provider **disabled** (`enabled = false`, DECISIONS #42): v1 is
+  email + password + OTP only. The block keeps `env(SUPABASE_AUTH_EXTERNAL_GOOGLE_*)`
+  references, so enabling SSO later is: fill `.env`, flip the flag,
+  `config push`.
+- Local email rate limit raised to 30/h to exercise the 7 templates.
+- `[remotes.production]` overrides the Auth URLs for the hosted project
+  (production site URL + redirects, project ref `tsmcdeynuzdbnluqdbmw`).
+
+### 15.6 Localized transactional emails (DECISIONS #39)
+
+- Copy lives in `packages/db/email/strings.mjs` (7 locales, en-GB source).
+- `npm run email:build -w @nutribio/db` generates four Go templates
+  (`confirmation`, `recovery`, `email_change`, `reauthentication`) in
+  `supabase/templates/`; each localized string is a
+  `{{ if eq .Data.locale "…" }}` chain with an **en-GB fallback**.
+- `.Data.locale` is the `user_metadata.locale` sent by the web app at
+  signup/OTP calls (phase 4.5); Google sign-ins have no metadata and fall back
+  to en-GB. The recovery email reuses the metadata stored on the user.
+- The generated HTML is committed: `supabase config push` uploads it (CLI ≥
+  2.108). Template paths resolve from the project root (`./supabase/templates/…`).
+- **Free plan blocker (DECISIONS #41):** the Management API rejects template
+  changes while the project uses the default email provider. The templates are
+  therefore applied at go-live — after Brevo SMTP or the Pro upgrade — and
+  `config diff` shows them as the only pending auth drift until then.
+- OTP emails show the 6-digit `{{ .Token }}` plus a `{{ .ConfirmationURL }}`
+  fallback button.
+
+### 15.7 Environments and secrets
+
+| Environment | Database | Auth |
+|---|---|---|
+| Local development | Supabase CLI Docker stack (`db:start`), Mailpit for emails | local keys from `db:status` (no OAuth provider; SSO deferred) |
+| Production (single hosted project `nutribio`, `eu-west-1`, Free) | `db push` applied; **Pro before go-live** (no pause, backups) | config pushed in two stages (#41): Free-plan-safe settings now, localized templates at go-live; Brevo SMTP once a domain exists |
+
+- Secrets: `packages/db/.env` (gitignored; `.env.example` documents it), the
+  dashboard, and later the API host environment. Nothing secret is committed;
+  the root `.gitignore` ignores `.env*` except `.env.example`. The API role
+  password lives in `NUTRIBIO_API_DATABASE_URL` (same file).
+- Access tokens are verified with **asymmetric keys (ES256) via JWKS**
+  (DECISIONS #40); the API uses the secret key only for admin calls.
+- The API connects through the **session pooler**
+  (`aws-0-eu-west-1.pooler.supabase.com:5432`, user `nutribio_api.<ref>`)
+  because the direct host `db.<ref>.supabase.co` is **IPv6-only** on Free; the
+  drizzle client sets `prepare: false` so the transaction pooler (6543) also
+  works.
+
+### 15.8 Verification (local, phase 4.3)
+
+- `npm run db:start` + `npm run db:reset`: both migrations apply on a fresh
+  database; `drizzle-kit check` and `typecheck` are green.
+- `npm run db:verify -w @nutribio/db`: RLS on all nine tables, no
+  `anon`/`authenticated` privileges, `nutribio_api` bypassrls + full CRUD,
+  unique bio date, one current plan, one active job, 18+ and goal CHECKs,
+  `updated_at` trigger, and cascade from `auth.users`.
+- `npm run email:verify -w @nutribio/db`: signup per locale → Mailpit shows the
+  correct localized body, subject and 6-digit OTP (7/7); `verify` with the code
+  returns a session; `recover` sends the localized recovery email.
+- REST smoke: `GET /rest/v1/profiles` → `PGRST205` (the `app` schema is not
+  exposed).

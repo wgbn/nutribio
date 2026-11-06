@@ -36,7 +36,8 @@ based on the minimal data actually collected. No data sharing or selling.
 - **Google Gemini API — paid tier MANDATORY** (the free tier allows Google
   to use prompts for training/human review; for EEA users paid terms apply
   regardless, but not automatically for Brazilian users).
-- Google OAuth; email/SMTP provider; Stripe/Link (independent controller /
+- Google OAuth (**only if/when SSO is enabled** — deferred, DECISIONS #42);
+  email/SMTP provider; Stripe/Link (independent controller /
   merchant of record for payments).
 - No partners for sharing or selling data (owner statement) — the policy must
   state this and the sub-processor list must be kept public.

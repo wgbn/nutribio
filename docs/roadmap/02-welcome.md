@@ -68,7 +68,8 @@ explains the app's purpose and how it works, like an in-app landing page.
 - [x] Docs: ARCHITECTURE §9, DECISIONS entry (#33).
 
 ### 2.3 Deferred to later waves
-- [ ] "Já tenho conta" CTA + login (Wave 6, item 4.5).
+- [ ] "Já tenho conta" CTA + login (Wave 6, item 4.5 — **email + password**;
+      Google/SSO deferred to the end of the project, DECISIONS #42).
 - [ ] Pricing teaser (Item 3).
 - [ ] Links to the legal documents (Item 5, phase 5.2).
 
