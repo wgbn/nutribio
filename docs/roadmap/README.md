@@ -28,7 +28,7 @@ log — roadmap decisions are also recorded there),
 | 1 | Multi-language support (7 locales + LLM output language) | [01-i18n.md](01-i18n.md) | ◐ (2026-10-06 — code complete; native review of es/fr/de/it pending) |
 | 2 | Welcome / landing screen | [02-welcome.md](02-welcome.md) | ☑ (2026-11-06 — local-only; auth CTA in Wave 6) |
 | 3 | Payments (Stripe, freemium, EUR + BRL) | [03-payments.md](03-payments.md) | ☐ |
-| 4 | Backend & storage (Nuxt API + Supabase) | [04-backend-storage.md](04-backend-storage.md) | ◐ (2026-11-06 — 3/9 phases: 4.1, 4.2, 4.3; 4.4–4.9 pending) |
+| 4 | Backend & storage (Nuxt API + Supabase) | [04-backend-storage.md](04-backend-storage.md) | ◐ (2026-11-06 — 4/9 phases: 4.1–4.4; 4.5–4.9 pending) |
 | 5 | Terms, privacy & consent (RGPD/LGPD/UK GDPR) | [05-legal-consent.md](05-legal-consent.md) | ◐ (2026-10-06 — first minimization change done: name removed from the prompt) |
 | 6 | Country-aware cuisine (onboarding + prompt) | [06-country-cuisine.md](06-country-cuisine.md) | ☑ (2026-10-06) |
 | 7 | Weekly shopping list ("Compras" tab) | [07-shopping-list.md](07-shopping-list.md) | ☑ (2026-10-06) |
@@ -50,15 +50,15 @@ backend):
    Wave 6) — ☑ done 2026-11-06.
 5. **Wave 5** — Item 4 phases 4.1–4.2 (monorepo + `packages/core`) — ☑ done
    2026-11-06.
-6. **Wave 6** — ◐ in progress: **Item 4 phase 4.3 done** (2026-11-06 — Supabase
-   project + schema + Auth config; owner setup in
-   [`../SUPABASE_SETUP.md`](../SUPABASE_SETUP.md)) — order changed by
-   DECISIONS #36: 4.3 creates infrastructure only and stores no user data, so
-   it can precede the legal texts. Remaining in this wave: Item 5 phases
-   5.1–5.2 (data inventory + legal texts — must exist before real user data
-   leaves the device), then Item 4 phases 4.4–4.9 (Nuxt API + auth + data
-   layer + background generation) together with Item 5 phases 5.3–5.5
-   (consent gate + data-subject rights).
+6. **Wave 6** — ◐ in progress: **Item 4 phases 4.3–4.4 done** (2026-11-06 —
+   Supabase project + schema + Auth config; then the API skeleton in
+   `apps/api`, still local-only) — order changed by DECISIONS #36 and #43:
+   4.3/4.4 create infrastructure and store no user data, so they can precede
+   the legal texts. Remaining in this wave: Item 5 phases 5.1–5.2 (data
+   inventory + legal texts — must exist before real user data leaves the
+   device), then Item 4 phases 4.5–4.9 (auth UI + data layer + background
+   generation) together with Item 5 phases 5.3–5.5 (consent gate +
+   data-subject rights).
 7. **Wave 7** — Item 3 (Stripe payments; requires backend + auth + legal).
 8. **Wave 8** — Launch hardening checklist (see §4 of the plan).
 

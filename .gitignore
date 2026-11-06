@@ -4,6 +4,10 @@ dist
 *.local
 .DS_Store
 
+# Nuxt/Nitro build artefacts (apps/api)
+.nuxt
+.output
+
 # Environment files: secrets never enter the repo (`.env.example` is
 # documentation only, per DECISIONS #3/#22).
 .env

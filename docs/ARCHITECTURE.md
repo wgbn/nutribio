@@ -27,12 +27,13 @@ explicitly confirms a (re)generation.
 There is **no backend and no database** in the shipped app. All data lives in
 `localStorage` (namespace `nutribio.v1`) and is intentionally single-device.
 
-> **Backend era in progress (DECISIONS #22, #36–#40):** the database schema,
-> roles and Auth configuration already exist in `packages/db` (roadmap 4.3),
-> but the web app still writes exclusively to `localStorage` — no user data
-> reaches the server until the consent gate (5.3) and the data layer (4.6).
-> See §15 for the database/Auth layer and `docs/SUPABASE_SETUP.md` for the
-> owner setup steps.
+> **Backend era in progress (DECISIONS #22, #36–#45):** the database schema,
+> roles and Auth configuration live in `packages/db` (roadmap 4.3) and the API
+> that owns them lives in `apps/api` (roadmap 4.4). The web app still writes
+> exclusively to `localStorage` and nothing calls the API — no user data
+> reaches the server until the consent gate (5.3) and the data layer (4.6),
+> and the API is not deployed until 4.8. See §15 for the database/Auth layer,
+> §16 for the API and `docs/SUPABASE_SETUP.md` for the owner setup steps.
 
 ## 2. Stack
 
@@ -40,7 +41,7 @@ There is **no backend and no database** in the shipped app. All data lives in
 |---|---|
 | Framework | React 19 |
 | Build | Vite 7 + TypeScript (strict) |
-| Repo layout | npm workspaces: `apps/web` (`@nutribio/web`) + `packages/core` (`@nutribio/core`, source-only, no deps) + `packages/db` (`@nutribio/db`, Drizzle schema + Supabase config) |
+| Repo layout | npm workspaces: `apps/web` (`@nutribio/web`) + `apps/api` (`@nutribio/api`, Nuxt server, phase 4.4) + `packages/core` (`@nutribio/core`, source-only, no deps) + `packages/db` (`@nutribio/db`, Drizzle schema + Supabase config) |
 | Styling | Tailwind CSS v4 (`@tailwindcss/vite`) |
 | AI | `@google/genai` ^2.x (lazy-loaded, web only) |
 | Charts | chart.js + react-chartjs-2 |
@@ -49,18 +50,19 @@ There is **no backend and no database** in the shipped app. All data lives in
 | i18n | `i18next` + `react-i18next` (26.x) — lazy per-locale catalogs |
 | Database (4.3) | Supabase Postgres (EU) + Drizzle ORM; migrations via Supabase CLI |
 | Auth (4.3) | Supabase Auth (email/password + 6-digit OTP; SSO deferred, DECISIONS #42) |
+| API (4.4) | Nuxt 4 server-only (Nitro `node-server`) + `jose` (JWKS) + `zod`; Drizzle through `@nutribio/db` |
 | Deployment | GitHub Pages project site (`/nutribio/`) via GitHub Actions |
 | UI language | 7 locales: `pt-PT`, `pt-BR`, `en-GB` (fallback), `es`, `fr`, `de`, `it` · Code language: English |
 
 ## 3. Project structure
 
 The repo is an **npm-workspaces monorepo** (roadmap 4.1, DECISIONS #34):
-`apps/web` is the shipped PWA (Vite root, GitHub Pages), `packages/core` is the
-shared pure logic (roadmap 4.2, DECISIONS #35), `packages/db` is the database
-schema + Supabase config (roadmap 4.3, DECISIONS #37–#40) and `apps/api` (Nuxt)
-arrives with roadmap 4.4. App commands are always run per workspace from the
-root (`npm run build -w @nutribio/web`); the root `package.json` only declares
-`workspaces`.
+`apps/web` is the shipped PWA (Vite root, GitHub Pages), `apps/api` is the API
+(roadmap 4.4, DECISIONS #44), `packages/core` is the shared pure logic
+(roadmap 4.2, DECISIONS #35) and `packages/db` is the database schema +
+Supabase config (roadmap 4.3, DECISIONS #37–#40). App commands are always run
+per workspace from the root (`npm run build -w @nutribio/web`); the root
+`package.json` only declares `workspaces`.
 
 ```
 nutribio/
@@ -73,32 +75,44 @@ nutribio/
 │   ├── DECISIONS.md             # decision log (ADR-style)
 │   └── SUPABASE_SETUP.md        # owner guide: project, Auth, OAuth, SMTP
 ├── apps/
-│   └── web/                     # the shipped PWA
-│       ├── package.json         # @nutribio/web — scripts + dependencies
-│       ├── index.html           # viewport-fit=cover, manifest, apple meta
-│       ├── vite.config.ts       # react + tailwind + VitePWA + base + allowedHosts
-│       ├── tsconfig.json        # extends ../../tsconfig.base.json
-│       ├── public/icons/        # icon-192/512.png, maskable-512.png
-│       ├── scripts/             # generate_icons.py, check_i18n.mjs
-│       └── src/
-│           ├── main.tsx         # React root + SW registration + schema check + i18n init
-│           ├── App.tsx          # welcome/onboarding gate, tab/sidebar routing, settings overlay
-│           ├── index.css        # Tailwind v4 theme + global styles
-│           ├── types.ts         # app-only types (Settings, TabId)
-│           ├── i18n/
-│           │   ├── locales.ts   # active locale tracking (pure definitions live in core)
-│           │   ├── index.ts     # i18next runtime (lazy catalogs, changeLocale via re-init)
-│           │   └── catalogs/    # en-GB (source), pt-PT, pt-BR, es, fr, de, it (TS modules)
-│           ├── lib/
-│           │   ├── storage.ts   # localStorage keys, defaults, bio merge/remove, export/import
-│           │   ├── models.ts    # live model listing (ai.models.list)
-│           │   ├── gemini.ts    # SDK call + retry (prompt/schema/parsing come from core)
-│           │   └── units.ts     # locale-aware number/date formatting (delegates to core)
-│           ├── hooks/
-│           │   ├── useStore.tsx # global store + persistence + generatePlan
-│           │   └── useInstallPrompt.ts
-│           ├── components/      # TabBar/Sidebar, Field, dialogs, charts, meal cards, icons
-│           └── screens/         # Welcome, Onboarding, Today, Plan, Shopping, Progress, EditData, Settings
+│   ├── web/                     # the shipped PWA
+│   │   ├── package.json         # @nutribio/web — scripts + dependencies
+│   │   ├── index.html           # viewport-fit=cover, manifest, apple meta
+│   │   ├── vite.config.ts       # react + tailwind + VitePWA + base + allowedHosts
+│   │   ├── tsconfig.json        # extends ../../tsconfig.base.json
+│   │   ├── public/icons/        # icon-192/512.png, maskable-512.png
+│   │   ├── scripts/             # generate_icons.py, check_i18n.mjs
+│   │   └── src/
+│   │       ├── main.tsx         # React root + SW registration + schema check + i18n init
+│   │       ├── App.tsx          # welcome/onboarding gate, tab/sidebar routing, settings overlay
+│   │       ├── index.css        # Tailwind v4 theme + global styles
+│   │       ├── types.ts         # app-only types (Settings, TabId)
+│   │       ├── i18n/
+│   │       │   ├── locales.ts   # active locale tracking (pure definitions live in core)
+│   │       │   ├── index.ts     # i18next runtime (lazy catalogs, changeLocale via re-init)
+│   │       │   └── catalogs/    # en-GB (source), pt-PT, pt-BR, es, fr, de, it (TS modules)
+│   │       ├── lib/
+│   │       │   ├── storage.ts   # localStorage keys, defaults, bio merge/remove, export/import
+│   │       │   ├── models.ts    # live model listing (ai.models.list)
+│   │       │   ├── gemini.ts    # SDK call + retry (prompt/schema/parsing come from core)
+│   │       │   └── units.ts     # locale-aware number/date formatting (delegates to core)
+│   │       ├── hooks/
+│   │       │   ├── useStore.tsx # global store + persistence + generatePlan
+│   │       │   └── useInstallPrompt.ts
+│   │       ├── components/      # TabBar/Sidebar, Field, dialogs, charts, meal cards, icons
+│   │       └── screens/         # Welcome, Onboarding, Today, Plan, Shopping, Progress, EditData, Settings
+│   └── api/                     # @nutribio/api — Nuxt server only (see §16)
+│       ├── package.json         # nuxt, jose, zod, @nutribio/core, @nutribio/db
+│       ├── nuxt.config.ts       # ssr: false, nitro node-server, runtimeConfig
+│       ├── vitest.config.ts     # integration suite configuration
+│       ├── .env.example         # NUXT_* variables (documentation only)
+│       ├── server/
+│       │   ├── api/             # health, account (get/delete/export), profile, history, bio
+│       │   ├── middleware/      # 00.apiOnly, 01.cors, 02.bodyLimit
+│       │   ├── plugins/         # shutdown (closes the DB pool)
+│       │   ├── routes/api/      # unknown /api/* → JSON 404
+│       │   └── utils/           # auth, db, errors, handler, mappers, queries, validation, supabaseAdmin
+│       └── tests/               # Vitest integration suite (§16.7)
 └── packages/
     ├── core/                    # @nutribio/core — pure domain logic (see §3.1)
     │   ├── package.json         # no runtime dependencies, source-only exports
@@ -642,6 +656,11 @@ The site is deployed as a GitHub Pages **project site** at
   `npm run db:verify -w @nutribio/db` (RLS, grants, cascade, constraints,
   triggers) and `npm run email:verify -w @nutribio/db` (7 localized OTP
   emails through Mailpit).
+- API (phase 4.4) — see §16.7: `npm run typecheck -w @nutribio/api` and
+  `npm run test:integration -w @nutribio/api` (builds the API, boots the built
+  Nitro server and drives it with real ES256 tokens against the local stack;
+  requires `npm run db:start`). `npm run build -w @nutribio/api` produces the
+  deployable `.output/` (used in 4.8).
 
 ## 14. Known limitations & notes
 
@@ -815,3 +834,140 @@ generated offline; the Supabase CLI is the only tool that touches a database).
   returns a session; `recover` sends the localized recovery email.
 - REST smoke: `GET /rest/v1/profiles` → `PGRST205` (the `app` schema is not
   exposed).
+
+## 16. API (`apps/api`) — roadmap 4.4
+
+The API is the **only** reader/writer of the `app` schema (DECISIONS #37/#44).
+It is a Nuxt project used as a **server only**: no pages, no Vue components, no
+HTML. Phase 4.4 runs it locally; the deploy arrives in 4.8 and the web app
+starts calling it in 4.6.
+
+### 16.1 Workspace and commands
+
+| Command (from the repo root) | What it does |
+|---|---|
+| `npm run dev -w @nutribio/api` | Nuxt dev server on port 3001 (needs the `NUXT_*` env) |
+| `npm run build -w @nutribio/api` | Nitro `node-server` build in `apps/api/.output` |
+| `npm run preview -w @nutribio/api` | Serves the built output (`node .output/server/index.mjs`) |
+| `npm run typecheck -w @nutribio/api` | `nuxt prepare` + strict `tsc --noEmit` |
+| `npm run test:integration -w @nutribio/api` | Vitest suite against the local stack (§16.7) |
+
+Pinned: `nuxt` 4.6.4 (security release), `jose` 6.2.14, `zod` 4.6.7, `vitest`
+5.0.5. `@nutribio/core` and `@nutribio/db` are consumed as TypeScript source
+and inlined into the Nitro bundle (`nitro.externals.inline`); `drizzle-orm`,
+`postgres` and `jose` stay as traced runtime dependencies.
+
+### 16.2 Configuration (server-only env)
+
+| Variable | Purpose |
+|---|---|
+| `NUXT_DATABASE_URL` | Postgres connection (local stack, or the `nutribio_api` session pooler in production) |
+| `NUXT_SUPABASE_URL` | Auth base URL — the JWKS and Admin API are derived from it |
+| `NUXT_SUPABASE_SECRET_KEY` | Server secret used **only** for `DELETE /api/account` (Admin API) |
+| `NUXT_CORS_ORIGINS` | Comma-separated allow-list of browser origins |
+
+`apps/api/.env.example` documents them; `.env` is gitignored. The Gemini key
+never reaches the API in this phase (generation moves here in 4.7).
+
+### 16.3 Request pipeline
+
+1. `server/middleware/00.apiOnly.ts` — any path outside `/api` answers the JSON
+   404 contract (the project never serves the framework shell).
+2. `server/middleware/01.cors.ts` — allow-list from `NUXT_CORS_ORIGINS`; known
+   origins get `access-control-allow-origin` + `Vary: Origin`, the methods
+   (`GET, PUT, DELETE, OPTIONS`), the headers (`authorization, content-type`)
+   and `content-disposition` exposed; unknown origins get nothing. Preflight
+   ends with `204`.
+3. `server/middleware/02.bodyLimit.ts` — bodies over **16 KB** are rejected
+   with `413 payloadTooLarge`.
+4. Routes are wrapped in `apiHandler` (`server/utils/handler.ts`), which
+   catches everything, maps it through `normalizeError` and writes the JSON
+   contract; `5xx` log lines contain only route + status + code.
+5. `server/routes/api/[...path].ts` — unknown API paths → `404 notFound`.
+6. `server/plugins/shutdown.ts` closes the Postgres pool on shutdown.
+
+### 16.4 Authentication (DECISIONS #40)
+
+`requireUser(event)` reads `Authorization: Bearer <token>` and verifies it with
+`jose` against `<NUXT_SUPABASE_URL>/auth/v1/.well-known/jwks.json`:
+`algorithms: ['ES256']`, `issuer: <url>/auth/v1`, `audience: 'authenticated'`,
+plus `role === 'authenticated'` and a uuid `sub`. The key set is cached and
+refetched on an unknown `kid` (rotation). Every failure is
+`401 {error: {code: 'unauthorized'}}`; no detail about the reason leaks.
+
+A valid token whose `auth.users` row was deleted still verifies, so writes hit
+the foreign key (`23503`) and are mapped to `401 accountNotFound`.
+
+### 16.5 Error contract (DECISIONS #44)
+
+```json
+{"error": {"code": "validationFailed", "issues": [{"path": "profile.age", "code": "too_small"}]}}
+```
+
+Codes: `unauthorized`, `accountNotFound`, `validationFailed`, `notFound`,
+`profileNotFound`, `bioRecordNotFound`, `conflict`, `payloadTooLarge`,
+`upstreamFailed`, `internal`. They are machine codes; the web layer (4.6)
+translates them to i18n keys — the API never returns localized text.
+Postgres SQLSTATEs are mapped: `23503` → 401 `accountNotFound`, `23505` → 409
+`conflict`, `23514`/`23502`/`22P02` → 400 `validationFailed`.
+
+### 16.6 Endpoints
+
+| Method + path | Auth | Behaviour |
+|---|---|---|
+| `GET /api/health` | public | `{status, db}`; `select 1`, `503` when the DB is unreachable |
+| `GET /api/account` | yes | `{id, email, hasProfile}` |
+| `DELETE /api/account` | yes | body `{confirm: true}` → Supabase Admin API deletes the auth user → every `app` row cascades; `204` |
+| `GET /api/account/export` | yes | JSON attachment (`content-disposition`, `cache-control: no-store`): `formatVersion: 1`, account, profile, profileHistory, bioRecords, plans (with dishes/shopping/selections/checks; empty until 4.7), consents |
+| `GET /api/profile` | yes | core `Profile` (`updatedAt` = epoch ms) or `404 profileNotFound` |
+| `PUT /api/profile` | yes | body `{profile, locale}` — the **whole** profile; transaction: `select … for update`, insert the previous state into `profile_history` when a field changed, upsert, return the stored `Profile` |
+| `GET /api/profile/history` | yes | `{items: [{snapshot, createdAt}]}` newest first, `?limit=` 1–200 (default 50) |
+| `GET /api/bio` | yes | core `BiometricsState` (`history` asc, `latest` = newest) |
+| `PUT /api/bio/:date` | yes | upsert on `(user_id, date)` with **replace** semantics (omitted metrics → null) → `BiometricsState` |
+| `DELETE /api/bio/:date` | yes | delete → `BiometricsState`, or `404 bioRecordNotFound` |
+
+Validation (zod, `server/utils/validation.ts`) mirrors the database CHECKs: age
+18–120, height 100–250, initial weight 30–400, sex/goal/country/locale from the
+`@nutribio/db` value lists, exercise enums + `HH:MM` workout time, name ≤ 60,
+excluded foods ≤ 1000, observations ≤ 2000, bio weight/body-fat/water ranges,
+real calendar dates not in the future, `.strictObject` everywhere (unknown keys
+rejected). Note for 4.5/4.6: the web onboarding currently accepts any `age > 0`
+— it must align with the 18+ rule when the profile starts being written to the
+API.
+
+**No consent guard yet:** the `consents` table exists, but document versions
+arrive with 5.2/5.3, so writes do not require consent rows in 4.4 (the API is
+not deployed). The guard lands with 5.3.
+
+### 16.7 Integration tests (DECISIONS #45)
+
+`apps/api/tests` runs with Vitest (`fileParallelism: false` — one API process,
+one database). `tests/globalSetup.ts` reads the local stack from
+`supabase status -o env`, checks that the JWKS has a signing key, builds the
+API, boots `.output/server/index.mjs` on a free port and writes the runtime
+config to a temp file (`tests/support.ts` reads it). Users are created through
+the local Admin API (`email_confirm: true`) and signed in with email +
+password, so every request carries a real ES256 token.
+
+Coverage (4 files, 34 tests): health, non-API and unknown-API 404s, CORS
+(allowed origin, unknown origin, preflight), token paths (missing, malformed,
+foreign key, wrong audience, tampered, valid), the 16 KB ceiling, profile CRUD
++ validation + history (snapshot only on change, `limit`), bio dedupe / latest
+fallback / validation / delete, account summary, export shape, per-user
+isolation and account deletion (confirmation required, rows cascaded, Admin API
+404, old token → `accountNotFound`).
+
+Requirement: the local stack must sign with the **ES256 signing key** —
+`signing_keys_path = "./signing_keys.json"` in
+`packages/db/supabase/config.toml`, generated once with
+`npm run auth:signing-key -w @nutribio/db` (gitignored) and applied by
+restarting the stack. The setting is local-only (`config diff` against
+production still lists only the 4 deferred email-template subjects).
+`API_TEST_SKIP_BUILD=1` reuses the last build while iterating.
+
+### 16.8 Not in this phase
+
+Deploy/host, HTTPS domain, env secrets on the host, CI (4.8); web auth UI
+(4.5); web data layer and the `nutribio.v2` cache (4.6); background generation
+worker + polling (4.7); consent endpoints and guard (5.3); rate limiting and
+the final hardening pass (4.9).

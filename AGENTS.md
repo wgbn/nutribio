@@ -7,9 +7,10 @@ UI language: Portuguese (PT-PT). Code/identifiers/comments: English.
 
 > **Monorepo (roadmap 4.1, DECISIONS #34):** the repo is an npm-workspaces
 > monorepo — `apps/web` holds the shipped PWA (Vite, GitHub Pages),
-> `packages/core` holds the shared pure logic (roadmap 4.2) and `packages/db`
-> holds the database schema + Supabase config (roadmap 4.3, DECISIONS #37).
-> `apps/api` (Nuxt) arrives with roadmap 4.4.
+> `packages/core` holds the shared pure logic (roadmap 4.2), `packages/db`
+> holds the database schema + Supabase config (roadmap 4.3, DECISIONS #37) and
+> `apps/api` holds the Nuxt API (roadmap 4.4, DECISIONS #44 — **local only**:
+> not deployed until 4.8, not called by the web until 4.6).
 
 > **2026-10 roadmap:** the 2026-10-06 decisions (#21–#30 in `docs/DECISIONS.md`)
 > approve a backend/payment era (Nuxt API + Supabase, Stripe, 7 locales,
@@ -48,8 +49,10 @@ The most critical ones:
 1. **No backend, no database, no sync** — data is intentionally single-device
    (localStorage). Do not add a server, accounts, or sync.
    *(Backend era: the database schema/Auth config exists in `packages/db`
-   since roadmap 4.3, but the web app must keep writing only to `localStorage`
-   until the consent gate 5.3 and the data layer 4.6 land — DECISIONS #36.)*
+   since roadmap 4.3 and the API exists in `apps/api` since 4.4, but the web
+   app must keep writing only to `localStorage` until the consent gate 5.3 and
+   the data layer 4.6 land, and the API is not deployed before 4.8 —
+   DECISIONS #36/#43.)*
 2. **Gemini API key lives ONLY in the Settings screen → localStorage.**
    Never bake it into the bundle or read it from env vars in production
    (the user explicitly rejected env vars because they are extractable from
@@ -88,7 +91,14 @@ Database / Supabase (`packages/db`, roadmap 4.3 — see `docs/SUPABASE_SETUP.md`
 - `npm run db:check|typecheck -w @nutribio/db` — migration consistency / strict TS
 - `npm run db:verify|email:verify -w @nutribio/db` — local DB assertions and 7-locale OTP email checks (require the local stack)
 - `npm run email:build -w @nutribio/db` — regenerate `supabase/templates/*.html` from `email/strings.mjs`
+- `npm run auth:signing-key -w @nutribio/db` — generate the local ES256 JWT signing key (`supabase/signing_keys.json`, gitignored; restart the stack after it)
 - `npm run db:link|db:push|config:push -w @nutribio/db` — **owner-only** commands against the hosted project (never run them unattended)
+
+API (`apps/api`, roadmap 4.4 — see `docs/ARCHITECTURE.md` §16):
+
+- `npm run dev -w @nutribio/api` — Nuxt dev server on port 3001 (needs `NUXT_DATABASE_URL`, `NUXT_SUPABASE_URL`, `NUXT_SUPABASE_SECRET_KEY`, `NUXT_CORS_ORIGINS`; see `apps/api/.env.example`)
+- `npm run build|preview|typecheck -w @nutribio/api` — Nitro `node-server` build (`.output/`), serve it, strict TS
+- `npm run test:integration -w @nutribio/api` — Vitest suite against the local Supabase stack with real ES256 tokens (requires `db:start` + the local signing key)
 
 ## Hard rules for `packages/core`
 
@@ -105,6 +115,7 @@ Database / Supabase (`packages/db`, roadmap 4.3 — see `docs/SUPABASE_SETUP.md`
 | `apps/web/` | the shipped PWA (Vite root: `index.html`, `vite.config.ts`, `public/`, `scripts/`) |
 | `packages/core/` | `@nutribio/core` — pure shared logic (no deps, no DOM): types, locales, countries, calculations, meal slots/plan, shopping, hash, prompt, JSON schema, normalizers |
 | `packages/db/` | `@nutribio/db` — database layer (roadmap 4.3): Drizzle schema for the private `app` schema, `createDb()` factory (API only), `supabase/config.toml` (local stack + Auth + Google + `remotes.production`), migrations and 7-locale auth email templates |
+| `apps/api/` | `@nutribio/api` — Nuxt server only (roadmap 4.4): JWKS auth, CORS allow-list, code-based errors, health, profile/bio/history CRUD, account export/deletion; integration tests in `apps/api/tests` |
 | `apps/web/src/i18n/` | i18n runtime + active-locale tracker (`locales.ts`), `Translate` adapter (`translate.ts`) and the 7 catalogs (`catalogs/`) |
 | `packages/core/src/calculations.ts` | BMR (Mifflin-St Jeor + Harris-Benedict), TDEE, calorie ranges, macros, meal split |
 | `packages/core/src/countries.ts` | `SUPPORTED_COUNTRIES` + country names/preselection (drives prompt cuisine) |
@@ -144,3 +155,6 @@ Database / Supabase (`packages/db`, roadmap 4.3 — see `docs/SUPABASE_SETUP.md`
   (see `docs/ARCHITECTURE.md` → Testing for the flows covered so far).
 - The real Gemini generation path needs a valid API key (user-provided in
   Settings); without it, error paths must degrade gracefully.
+- After API changes: `npm run typecheck -w @nutribio/api` +
+  `npm run test:integration -w @nutribio/api` (local stack required).
+- After database changes: `npm run db:check|typecheck|db:verify -w @nutribio/db`.

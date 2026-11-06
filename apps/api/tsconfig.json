@@ -1,0 +1,9 @@
+{
+  "extends": "./.nuxt/tsconfig.json",
+  "compilerOptions": {
+    // Nuxt enables `noUncheckedIndexedAccess`, but `@nutribio/core` is
+    // type-checked with the web app's settings (its build owns that check) and
+    // does not satisfy it. Keep the API aligned with the rest of the monorepo.
+    "noUncheckedIndexedAccess": false
+  }
+}

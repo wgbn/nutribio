@@ -660,3 +660,98 @@ in `packages/db/.env`, flip `enabled` to true, `config push`, add the button —
 no schema or API change). Existing email accounts are unaffected when SSO
 arrives; the same address can be linked to the provider then.
 
+#43. 2026-11-06 — Wave 6 order: phase 4.4 (API skeleton) before the legal texts (5.1–5.2)
+**Context:** DECISIONS #36 fixed the Wave 6 order as 4.3 → 5.1–5.2 (data
+inventory + legal texts) → 4.4 onwards, because no real user data may reach a
+server before the texts exist. The owner asked to continue with phase 4.4
+right after 4.3.
+**Decision:** Execute **4.4 before 5.1–5.2**. Phase 4.4 creates the API
+locally only: it is not deployed (that is 4.8) and the web app does not call it
+until the data layer (4.6), which is itself gated by the consent gate (5.3).
+No user data leaves the device, so the ordering reason behind #36 is not
+touched.
+**Consequences:** DECISIONS #29 stays intact — the legal texts, the lawyer
+review and the consent gate still block real data reaching a deployed server.
+The roadmap README and `04-backend-storage.md` record the new order; the "no
+backend" hard constraint in `AGENTS.md`/`.devin/global_rules.md` still
+describes the shipped app until 4.8.
+
+#44. 2026-11-06 — API stack and contract: Nuxt 4 server-only, JWKS auth, code-based errors, allow-list CORS
+**Context:** Phase 4.4 needed the concrete shape of `apps/api` (DECISIONS #22
+only said "Nuxt (Nitro)"). The API serves JSON to the PWA; it has no pages, no
+Vue components and no SEO surface.
+**Decision:**
+- **Nuxt 4, server-only**: `apps/api` (`@nutribio/api`) keeps only `server/`
+  (no `app/`), Nitro preset `node-server`, `ssr: false`. A middleware answers
+  every non-`/api` path (and unknown `/api/*` paths) with the JSON error
+  contract, so the framework's HTML shell is never served. Nuxt is pinned to
+  **4.6.4** — a security release published 4 days before the change (8 Nuxt +
+  3 Nitro advisories), a deliberate exception to the "≥ 7 days old" rule;
+  `jose` 6.2.14 and `zod` 4.6.7 follow the rule.
+- **Auth**: `Authorization: Bearer <access token>` verified with `jose`
+  against `<supabaseUrl>/auth/v1/.well-known/jwks.json`
+  (`algorithms: ['ES256']`, `issuer: <supabaseUrl>/auth/v1`,
+  `audience: 'authenticated'`, `role === 'authenticated'`, uuid `sub`). No
+  shared JWT secret on the API host (#40). A valid token whose `auth.users`
+  row is gone maps the resulting foreign-key violation to
+  `401 accountNotFound`.
+- **Errors**: every response failure is `{error: {code, issues?}}` with the
+  codes `unauthorized`, `accountNotFound`, `validationFailed`, `notFound`,
+  `profileNotFound`, `bioRecordNotFound`, `conflict`, `payloadTooLarge`,
+  `upstreamFailed`, `internal` — codes, never translated strings (#35). A
+  single `apiHandler` wrapper produces the contract; Postgres SQLSTATEs
+  (`23503`, `23505`, `23514`, `23502`, `22P02`) are mapped explicitly. Logs
+  carry only route + status + code (no bodies, tokens or health data).
+- **CORS**: allow-list from `NUXT_CORS_ORIGINS` (production site, local dev,
+  the owner's tunnel); unknown origins get no CORS headers. Preflight answers
+  `204` with `authorization, content-type`, `GET, PUT, DELETE, OPTIONS` and
+  exposes `content-disposition`.
+- **Limits**: 16 KB request-body ceiling (the free-text fields are already
+  capped by zod); rate limiting stays a 4.9 item.
+- **Data semantics**: `PUT /api/profile` takes the whole profile (all fields
+  required, so the carried-through rule of #11/#18/#26/#32 is enforced by
+  validation) and inserts the **previous** state into `profile_history` inside
+  the same transaction, only when a field actually changed. Bio writes replace
+  the measurement of that date (dedupe per #10, omitted metrics → null) and
+  `latest` is the newest date. `GET /api/account/export` returns
+  `formatVersion: 1` with account, profile, history, bio, plans (empty until
+  4.7) and consents as a JSON attachment. `DELETE /api/account` requires
+  `{confirm: true}`, calls the Supabase **Admin API** with the server secret
+  (the only admin call) and lets the `auth.users` cascade delete every `app`
+  row.
+- **No consent guard yet**: the `consents` table exists but document versions
+  arrive with 5.2/5.3, so the API does not require consent rows in 4.4 (the API
+  is not deployed). The guard is part of 5.3.
+- **Env** (server-only, never in the client bundle): `NUXT_DATABASE_URL`,
+  `NUXT_SUPABASE_URL`, `NUXT_SUPABASE_SECRET_KEY`, `NUXT_CORS_ORIGINS`
+  (documented in `apps/api/.env.example`).
+**Consequences:** The API speaks one error/response language that the web
+layer (4.6) can translate to i18n keys. `@supabase/supabase-js` is not added
+server-side (plain `fetch` for the single admin call). Multi-device conflicts
+stay last-write-wins for v1 (no `If-Match`), revisited in 4.6. The Nuxt/Vite
+toolchain advisories are inherited from the ecosystem and must be reviewed
+before the 4.8 deploy.
+
+#45. 2026-11-06 — Integration tests with Vitest against the local Supabase stack (real ES256 tokens)
+**Context:** The API had no automated verification: token verification, RLS
+bypass role access, validation ranges and the account-deletion cascade can
+only be proven against a real database and a real Auth server.
+**Decision:** `apps/api/tests` holds a **Vitest** suite
+(`npm run test:integration -w @nutribio/api`) with a `globalSetup` that reads
+the local stack from `supabase status -o env`, builds the API, boots the built
+Nitro server on a free port and publishes the runtime config through a temp
+file. Users are created through the local Admin API (`email_confirm: true`) and
+signed in with email + password, so every request carries a **real ES256 access
+token**. The suite covers health, 404s, CORS, token rejection paths (missing,
+malformed, foreign key, wrong audience, tampered, valid), the 16 KB ceiling,
+profile CRUD + validation + history, bio dedupe/latest/validation/delete,
+export shape, per-user isolation and account deletion (rows cascaded, Admin
+API 404, old token → `accountNotFound`). Files run serially (one API process,
+one database).
+**Consequences:** The local stack must sign with an **ES256 signing key**
+(`signing_keys_path` in `packages/db/supabase/config.toml`, generated once with
+`npm run auth:signing-key -w @nutribio/db`, gitignored) — otherwise the JWKS is
+empty and the suite fails with an explicit message. The setting is local-only:
+`supabase config diff` against production still reports only the 4 deferred
+email-template subjects. `API_TEST_SKIP_BUILD=1` reuses the last build while
+iterating. The suite is not part of CI yet (no API deploy before 4.8).

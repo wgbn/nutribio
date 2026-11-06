@@ -144,6 +144,7 @@ templates on the Free plan.
 
 ```bash
 npm run db:start -w @nutribio/db    # Docker: Postgres 54322, API 54321, Studio 54323, Mailpit 54324
+npm run auth:signing-key -w @nutribio/db  # once: local ES256 signing key (gitignored)
 npm run db:reset -w @nutribio/db    # re-apply every migration from scratch
 npm run db:status -w @nutribio/db   # URLs + local keys
 npm run db:verify -w @nutribio/db   # RLS, grants, cascade, constraints, triggers
@@ -151,6 +152,21 @@ npm run email:verify -w @nutribio/db # signup per locale → localized OTP email
 npm run db:stop -w @nutribio/db
 ```
 
+- **JWT signing key (local, phase 4.4 — DECISIONS #45):** the API verifies
+  access tokens through the JWKS endpoint, exactly like production, so the
+  local stack must sign with an **ES256** key. `supabase/config.toml` sets
+  `signing_keys_path = "./signing_keys.json"`; generate the file once with
+  `npm run auth:signing-key -w @nutribio/db` (gitignored) and **restart the
+  stack** (`db:stop` + `db:start`). Without it the JWKS returns an empty key
+  set and the API integration suite fails with an explicit message. The
+  setting is local-only — `supabase config diff` against the hosted project
+  still reports only the 4 deferred email-template subjects.
+- **API environment (phase 4.4):** copy `apps/api/.env.example` to
+  `apps/api/.env` (gitignored) and fill `NUXT_SUPABASE_URL`,
+  `NUXT_SUPABASE_SECRET_KEY` (`SECRET_KEY` from `db:status -o env`),
+  `NUXT_DATABASE_URL` and `NUXT_CORS_ORIGINS`. The integration suite reads the
+  same values from `db:status -o env` by itself, so no `.env` is needed to run
+  the tests.
 - Studio: <http://127.0.0.1:54323> · Mailpit (emails): <http://127.0.0.1:54324>
 - Local API: `http://127.0.0.1:54321` (auth at `/auth/v1`).
 

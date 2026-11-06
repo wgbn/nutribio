@@ -170,7 +170,10 @@ jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
-# signing_keys_path = "./signing_keys.json"
+# Local only: the stack signs ES256 so the API can verify tokens through the
+# JWKS endpoint, exactly like production (DECISIONS #40/#45). Generate the file
+# once with `npm run auth:signing-key -w @nutribio/db`; it is gitignored.
+signing_keys_path = "./signing_keys.json"
 # If disabled, the refresh token will never expire.
 enable_refresh_token_rotation = true
 # Allows refresh tokens to be reused after expiry, up to the specified interval in seconds.

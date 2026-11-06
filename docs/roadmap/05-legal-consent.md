@@ -104,6 +104,10 @@ obligation (tax records — via MoR) · legitimate interest (security).
 - [ ] Definições → "Privacidade": view documents, export my data (JSON),
       delete account (cascade + Stripe customer handling), withdraw consent,
       contact.
+- [x] API side (roadmap 4.4, 2026-11-06): `GET /api/account/export` (full JSON,
+      `formatVersion: 1`) and `DELETE /api/account` (`{confirm:true}` → Admin
+      API → cascade of every `app` row). The Settings UI and the Stripe
+      customer handling arrive with this phase.
 
 ### 5.5 Retention & processors
 - [ ] Retention job + sub-processor list page + Gemini paid-tier
@@ -125,3 +129,8 @@ obligation (tax records — via MoR) · legitimate interest (security).
 - 2026-10-06 — First code change landed with the prompt rewrite (item 1.4):
   the profile name is no longer sent to the Gemini prompt (data
   minimization). Remaining 5.1 work: docs/legal inventory, RoPA, DPIA-lite.
+
+- 2026-11-06 — API groundwork for 5.4 landed with roadmap 4.4: data export
+  (`GET /api/account/export`) and account deletion (`DELETE /api/account`,
+  Admin API + cascade). The Settings UI, the Stripe customer handling and the
+  consent guard (5.3) are still pending.

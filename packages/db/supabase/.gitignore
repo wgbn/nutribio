@@ -2,6 +2,10 @@
 .branches
 .temp
 
+# Local JWT signing keys (ES256, DECISIONS #45): the private key never enters
+# the repository. Generate with `npm run auth:signing-key -w @nutribio/db`.
+signing_keys.json
+
 # dotenvx
 .env.keys
 .env.local

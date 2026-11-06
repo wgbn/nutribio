@@ -22,6 +22,7 @@
     "db:push": "supabase db push",
     "config:push": "supabase config push",
     "db:verify": "docker exec -i supabase_db_nutribio psql -U postgres -d postgres -v ON_ERROR_STOP=1 < supabase/tests/verify_phase_4_3.sql",
+    "auth:signing-key": "test -f supabase/signing_keys.json || echo '[]' > supabase/signing_keys.json; supabase gen signing-key --algorithm ES256",
     "email:verify": "bash supabase/tests/verify_emails.sh",
     "email:build": "node scripts/build_email_templates.mjs"
   },
