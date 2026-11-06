@@ -453,3 +453,27 @@ and no API calls.
 phase (4.5) adds the "I already have an account" CTA and the consent gate
 (5.3) between Welcome and Onboarding; re-showing Welcome on logout is decided
 then. The public SEO landing page remains deferred.
+
+#34. 2026-11-06 — Monorepo conversion: npm workspaces, `apps/web` + per-workspace commands
+**Context:** Roadmap 4.1 (Wave 5) — DECISIONS #22 approved a monorepo with
+`apps/web`, `apps/api` and `packages/core`, but the repo was still a single
+Vite project at the root.
+**Decision:** The repo is now an **npm-workspaces monorepo** with a single
+root `package-lock.json`. The whole app moved (git history preserved, `git
+mv`) to `apps/web/` as `@nutribio/web` (its `package.json` holds the scripts
+and dependencies; Vite root is `apps/web`, build output `apps/web/dist`). The
+root `package.json` declares **only** `workspaces: ["apps/*", "packages/*"]` —
+no app scripts — so every command is explicit about its target:
+`npm run dev|build|preview|i18n:check|icons -w @nutribio/web`. CI
+(`.github/workflows/deploy.yml`) runs `npm ci` at the root, then
+`npm run build -w @nutribio/web` with `BASE_PATH=/nutribio/`, and uploads
+`apps/web/dist`.
+**Consequences:** Behavior is unchanged (same bundle, same `nutribio.v1`
+localStorage data, same `inputsHash`); GitHub Pages keeps serving the same
+project site. `packages/core` is added in 4.2 and `apps/api` in 4.4 without
+further restructuring. Docs paths are now `apps/web/...` (ARCHITECTURE §3
+states that the rest of the document is relative to `apps/web/`). Tailwind v4
+content detection is now scoped to `apps/web`, so two utilities that were only
+matched from repo-root markdown (`.table`, `.rounded`, both unused in the app)
+disappeared from the CSS (~50 bytes smaller). The root `dist/` from the old
+layout is a stale ignored artefact and can be deleted.

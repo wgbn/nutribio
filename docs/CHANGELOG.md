@@ -6,6 +6,39 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-11-06 — Monorepo conversion (roadmap item 4, phase 4.1, Wave 5)
+
+Repository restructured into an npm-workspaces monorepo so the backend era
+(`packages/core`, then `apps/api`) can be added without further moves. **No
+application behavior changed** (DECISIONS #34).
+
+- The whole app moved to **`apps/web/`** with `git mv` (history preserved):
+  `src/`, `public/`, `index.html`, `vite.config.ts`, `tsconfig.json`,
+  `scripts/` (`generate_icons.py`, `check_i18n.mjs`) and `.env.example`.
+  `apps/web/package.json` is now `@nutribio/web` and holds the scripts and the
+  full dependency set (same version ranges).
+- Root `package.json` declares **only** `workspaces: ["apps/*",
+  "packages/*"]` — no app scripts. Commands are per workspace:
+  `npm run dev|build|preview|i18n:check|icons -w @nutribio/web`.
+- Single root `package-lock.json` (`npm install` at the root; `@nutribio/web`
+  is symlinked into `node_modules`).
+- CI (`.github/workflows/deploy.yml`): `npm ci` at the root →
+  `npm run build -w @nutribio/web` (`BASE_PATH=/nutribio/`) →
+  `actions/upload-pages-artifact` with `apps/web/dist`. Same GitHub Pages
+  project site.
+- Docs updated for the new layout: `AGENTS.md` (commands + quick map),
+  `.devin/global_rules.md` (`apps/web/vite.config.ts`), `docs/ARCHITECTURE.md`
+  §3/§12/§13.
+- Verified: `npm install` + `npm run build -w @nutribio/web` green (i18n
+  parity 313 keys × 7, strict TS, build in `apps/web/dist`); bundle parity
+  against the pre-move baseline (identical chunk list and sizes — main
+  394.07 kB, SDK chunk 536.79 kB, gemini chunk 16.06 kB, 6 lazy catalog
+  chunks; only the CSS is ~50 bytes smaller because Tailwind content
+  detection no longer scans repo-root markdown: two unused utilities
+  `.table`/`.rounded` are gone); `BASE_PATH=/nutribio/` build produces
+  `start_url: /nutribio/`; dev server from the workspace boots on :5173 and
+  the Welcome screen renders.
+
 ## 2026-11-06 — Welcome / landing screen (roadmap item 2, Wave 4)
 
 First-use landing screen shown before the onboarding wizard: what the app does,

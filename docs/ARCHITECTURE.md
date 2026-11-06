@@ -44,61 +44,61 @@ There is **no backend and no database**. All data lives in `localStorage`
 
 ## 3. Project structure
 
+The repo is an **npm-workspaces monorepo** (roadmap 4.1, DECISIONS #34):
+`apps/web` is the shipped PWA (Vite root, GitHub Pages). `packages/core`
+(roadmap 4.2) and `apps/api` (roadmap 4.4) will be added by their phases. App
+commands are always run per workspace from the root
+(`npm run build -w @nutribio/web`); the root `package.json` only declares
+`workspaces`.
+
 ```
 nutribio/
 ├── AGENTS.md                    # agent entry point + critical decisions
+├── package.json                 # workspaces only (apps/*, packages/*)
+├── package-lock.json            # single lockfile for the whole monorepo
 ├── docs/
 │   ├── ARCHITECTURE.md          # this file
+│   ├── CHANGELOG.md             # mandatory change log
 │   └── DECISIONS.md             # decision log (ADR-style)
-├── index.html                   # viewport-fit=cover, manifest, apple meta
-├── vite.config.ts               # react + tailwind + VitePWA + base + allowedHosts
 ├── .github/workflows/deploy.yml # build + deploy to GitHub Pages (push to main)
-├── package.json / tsconfig.json
-├── public/icons/                # icon-192/512.png, maskable-512.png
-├── scripts/generate_icons.py    # PWA icon generator (PIL)
-└── src/
-    ├── main.tsx                 # React root + SW registration + schema check + i18n init
-    ├── App.tsx                  # onboarding gate, tab/sidebar routing, settings overlay
-    ├── index.css                # Tailwind v4 theme + global styles
-    ├── types.ts                 # all domain types
-    ├── i18n/
-    │   ├── locales.ts           # locale list, resolveLocale (device language), active locale
-    │   ├── index.ts             # i18next runtime (lazy catalogs, changeLocale via re-init)
-    │   └── catalogs/            # en-GB (source), pt-PT, pt-BR, es, fr, de, it (TS modules)
-    ├── lib/
-    │   ├── calculations.ts      # BMR/TDEE/targets/meal split + label KEYS
-    │   ├── countries.ts         # SUPPORTED_COUNTRIES + name/preselection helpers
-    │   ├── storage.ts           # localStorage keys, defaults, bio merge/remove
-    │   ├── gemini.ts            # prompt builder (English) + generateWeeklyPlan + normalizeWeek
-    │   ├── models.ts            # live model listing (ai.models.list)
-    │   ├── plan.ts              # assemblePlan, SLOT_ORDER/WEEK_ORDER, totals
-    │   ├── shopping.ts          # shopping list aggregation + quantity labels
-    │   ├── mealTimes.ts         # 5 meal slots, time windows, next-meal helpers (label KEYS)
-    │   ├── hash.ts              # FNV-1a
-    │   └── units.ts             # locale-aware number/date formatting
-    ├── hooks/
-    │   ├── useStore.tsx         # global store + persistence + generatePlan
-    │   └── useInstallPrompt.ts  # beforeinstallprompt + standalone detection
-    ├── components/
-    │   ├── TabBar.tsx           # mobile bottom nav (TABS shared with Sidebar)
-    │   ├── Sidebar.tsx          # desktop nav (md+)
-    │   ├── Field.tsx            # Field, TextInput, NumberInput, TextArea, Select, ChipGroup
-    │   ├── ConfirmDialog.tsx    # modal dialog (primary/danger, busy state)
-    │   ├── ChartBlock.tsx       # Chart.js line chart wrapper
-    │   ├── DishSwitcher.tsx     # variation arrows + dots
-    │   ├── MacroBar.tsx         # progress bar vs target
-    │   ├── MealCard.tsx         # meal slot card + MacroChips + variation picker
-    │   └── icons.tsx            # inline SVG icon set (no icon dep)
-    └── screens/
-        ├── Welcome.tsx          # in-app landing screen (first use only)
-        ├── Onboarding.tsx       # 3-step wizard
-        ├── Today.tsx            # "Hoje" — meal of the moment
-        ├── Plan.tsx             # weekly view
-        ├── Shopping.tsx         # "Compras" — weekly shopping list
-        ├── Progress.tsx         # charts + history
-        ├── EditData.tsx         # "Dados" — all forms + calc summary
-        └── Settings.tsx         # "Definições" overlay
+└── apps/
+    └── web/                     # the shipped PWA
+        ├── package.json         # @nutribio/web — scripts + dependencies
+        ├── index.html           # viewport-fit=cover, manifest, apple meta
+        ├── vite.config.ts       # react + tailwind + VitePWA + base + allowedHosts
+        ├── tsconfig.json
+        ├── public/icons/        # icon-192/512.png, maskable-512.png
+        ├── scripts/             # generate_icons.py (PIL), check_i18n.mjs
+        └── src/
+            ├── main.tsx         # React root + SW registration + schema check + i18n init
+            ├── App.tsx          # welcome/onboarding gate, tab/sidebar routing, settings overlay
+            ├── index.css        # Tailwind v4 theme + global styles
+            ├── types.ts         # all domain types
+            ├── i18n/
+            │   ├── locales.ts   # locale list, resolveLocale (device language), active locale
+            │   ├── index.ts     # i18next runtime (lazy catalogs, changeLocale via re-init)
+            │   └── catalogs/    # en-GB (source), pt-PT, pt-BR, es, fr, de, it (TS modules)
+            ├── lib/
+            │   ├── calculations.ts  # BMR/TDEE/targets/meal split + label KEYS
+            │   ├── countries.ts     # SUPPORTED_COUNTRIES + name/preselection helpers
+            │   ├── storage.ts       # localStorage keys, defaults, bio merge/remove
+            │   ├── gemini.ts        # prompt builder (English) + generateWeeklyPlan + normalizeWeek
+            │   ├── models.ts        # live model listing (ai.models.list)
+            │   ├── plan.ts          # assemblePlan, SLOT_ORDER/WEEK_ORDER, totals
+            │   ├── shopping.ts      # shopping list aggregation + quantity labels
+            │   ├── mealTimes.ts     # 5 meal slots, time windows, next-meal helpers (label KEYS)
+            │   ├── hash.ts          # FNV-1a
+            │   ├── errors.ts        # describeError (readable API errors)
+            │   └── units.ts         # locale-aware number/date formatting
+            ├── hooks/
+            │   ├── useStore.tsx         # global store + persistence + generatePlan
+            │   └── useInstallPrompt.ts  # beforeinstallprompt + standalone detection
+            ├── components/      # TabBar/Sidebar, Field, dialogs, charts, meal cards, icons
+            └── screens/         # Welcome, Onboarding, Today, Plan, Shopping, Progress, EditData, Settings
 ```
+
+Unless stated otherwise, module paths in the rest of this document are relative
+to `apps/web/` (modules that later move to `packages/core` say so explicitly).
 
 ## 4. Data model & storage
 
@@ -537,8 +537,9 @@ The site is deployed as a GitHub Pages **project site** at
   to `public/` assets. `navigateFallback` is relative so it resolves inside
   the service-worker scope.
 - `.github/workflows/deploy.yml` runs on push to `main` (and manually via
-  `workflow_dispatch`): `npm ci` → `npm run build` (with `BASE_PATH`) →
-  `actions/upload-pages-artifact` (`dist`) → `actions/deploy-pages`.
+  `workflow_dispatch`): `npm ci` (root, whole monorepo) →
+  `npm run build -w @nutribio/web` (with `BASE_PATH`) →
+  `actions/upload-pages-artifact` (`apps/web/dist`) → `actions/deploy-pages`.
 - GitHub Pages must be configured with Source = **GitHub Actions**.
 - `public/.nojekyll` disables Jekyll processing (safety net for branch-based
   deploys).
@@ -549,13 +550,15 @@ The site is deployed as a GitHub Pages **project site** at
 
 ## 13. Testing & verification
 
-- `npm run build` — i18n parity check + strict TS + production build; also
-  check the chunk layout (the Gemini SDK and the 6 lazy catalogs must stay
-  out of the main bundle).
+- `npm run build -w @nutribio/web` — i18n parity check + strict TS + production
+  build (output in `apps/web/dist/`); also check the chunk layout (the Gemini
+  SDK and the 6 lazy catalogs must stay out of the main bundle).
 - Pure-logic tests: bundle a scratch entry with
   `npx esbuild <file> --bundle --format=cjs --platform=node` and run with
   node (used previously for `normalizeWeek`, `computeTargets`, `filterModels`,
-  `buildPrompt`). Use `--format=cjs` because `@google/genai` needs CJS.
+  `buildPrompt`). Use `--format=cjs` because `@google/genai` needs CJS. The
+  scratch entry must live inside the repo (or next to a `node_modules`
+  symlink) so package imports resolve.
 - UI flows (verified historically with browser-harness CDP against the dev
   server): onboarding 3 steps + skip, confirm-dialog gating, calculations
   summary values, bioimpedance history add/edit/delete, model dropdown

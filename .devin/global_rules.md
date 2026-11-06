@@ -45,8 +45,8 @@ A task is not complete until its documentation is written.
   production, never log it.
 - Plan regeneration is ALWAYS gated by the user's confirmation dialog; never
   call the Gemini API automatically (on load, on data change, etc.).
-- Keep `server.allowedHosts` in `vite.config.ts` restricted to the user's
-  tunnel host (`nbio.loca.lt`) — do not widen it to `'*'`.
+- Keep `server.allowedHosts` in `apps/web/vite.config.ts` restricted to the
+  user's tunnel host (`nbio.loca.lt`) — do not widen it to `'*'`.
 - Never drop `profile.excludedFoods` / `profile.observations` when writing a
   profile (all profile writes must carry them through).
 - Mobile-first does NOT mean mobile-only: layouts must adapt — bottom tab bar

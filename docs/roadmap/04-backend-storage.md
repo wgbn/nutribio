@@ -1,6 +1,6 @@
 # 04 — Backend & storage (Nuxt API + Supabase)
 
-**Status:** ☐ Not started
+**Status:** ◐ In progress (2026-11-06 — 4.1 monorepo done; 4.2 `packages/core` in progress)
 
 **Note:** this item **supersedes DECISIONS #1** (100% frontend, no backend).
 The decision was taken explicitly by the owner on 2026-10-06 (DECISIONS #22).
@@ -107,22 +107,47 @@ DECISIONS #3 and #13).
 
 ## Phases
 
-- 4.1 Monorepo conversion (move app to `apps/web`, workspaces, CI workflow
-      paths, docs paths) — no behavior change.
-- 4.2 Extract `packages/core` (pure logic + tests).
-- 4.3 Supabase project (EU) + migrations + RLS + Auth providers/OTP email
+### 4.1 Monorepo conversion (no behavior change)
+- [x] Root `package.json` = npm workspaces only (`apps/*`, `packages/*`),
+      single root lockfile (DECISIONS #34).
+- [x] `apps/web` (`@nutribio/web`): `src/`, `public/`, `index.html`,
+      `vite.config.ts`, `tsconfig.json`, `scripts/`, `.env.example` moved with
+      `git mv`; scripts + dependencies in the workspace package.
+- [x] Per-workspace commands (`npm run … -w @nutribio/web`); docs updated
+      (`AGENTS.md`, `.devin/global_rules.md`, `docs/ARCHITECTURE.md`).
+- [x] CI workflow paths: root `npm ci` → `npm run build -w @nutribio/web` →
+      upload `apps/web/dist`.
+- [x] Verified: bundle parity vs baseline (identical chunks/sizes), CSS ~50 B
+      smaller (Tailwind no longer scans repo-root markdown), `BASE_PATH` build,
+      dev server smoke.
+
+### 4.2 Extract `packages/core` (pure logic + tests)
+- [ ] `packages/core` (`@nutribio/core`): source-only exports, **no runtime
+      dependencies**, `tsconfig` without DOM/Node libs (DECISIONS #35).
+- [ ] Move: domain types, pure locale definitions, countries, calculations,
+      mealTimes, plan, shopping, hash, `describeError`, `formatNumber`,
+      prompt builder, JSON schema, normalizers.
+- [ ] Remove hidden state: injected `Translate` + explicit `locale`; parse
+      errors become codes.
+- [ ] Web keeps: `storage`, `models`, `units`, i18n runtime + catalogs,
+      active-locale tracker and the `@google/genai` call.
+- [ ] Golden-equivalence check (esbuild scratch): byte-identical prompt in
+      4 locales, identical `inputsHash`, targets, normalization, shopping.
+- [ ] Docs: ARCHITECTURE §3.1, DECISIONS #35, CHANGELOG.
+
+### 4.3 Supabase project (EU) + migrations + RLS + Auth providers/OTP email
       templates (7 languages) + SMTP.
-- 4.4 Nuxt API skeleton: JWT middleware, CORS, error codes, health; CRUD for
+### 4.4 Nuxt API skeleton: JWT middleware, CORS, error codes, health; CRUD for
       profile/bio/history; account export/delete (with Item 5).
-- 4.5 Web auth UI: login/signup/OTP/recovery/Google; session; App gate
+### 4.5 Web auth UI: login/signup/OTP/recovery/Google; session; App gate
       `Welcome → Auth → Consent → Onboarding → Shell`.
-- 4.6 Web data layer: `useStore` on the API + `nutribio.v2` cache/sync
+### 4.6 Web data layer: `useStore` on the API + `nutribio.v2` cache/sync
       markers; remove client-side Gemini.
-- 4.7 Background generation worker + polling + feedback changes.
-- 4.8 Deploy API (Docker on chosen host, HTTPS domain, env secrets, CI) +
+### 4.7 Background generation worker + polling + feedback changes.
+### 4.8 Deploy API (Docker on chosen host, HTTPS domain, env secrets, CI) +
       update `AGENTS.md` / `.devin/global_rules.md` hard constraints (the
       "no backend" text becomes effective here).
-- 4.9 Hardening & end-to-end verification.
+### 4.9 Hardening & end-to-end verification.
 
 ## Verification
 
@@ -136,3 +161,8 @@ DECISIONS #3 and #13).
 ## Progress log
 
 - 2026-10-06 — Item created from the approved roadmap plan.
+- 2026-11-06 — Phase 4.1 (Wave 5): monorepo conversion (npm workspaces,
+  `apps/web` = `@nutribio/web`, root package.json = workspaces only, single
+  lockfile, CI builds `-w @nutribio/web` and uploads `apps/web/dist`, docs
+  paths updated). Zero behavior change — verified by bundle parity against the
+  pre-move baseline plus a dev-server smoke test. DECISIONS #34.
