@@ -1,6 +1,6 @@
 // Deterministic local calculations: BMR (Mifflin-St Jeor & Harris-Benedict),
 // TDEE, calorie range per goal and macro targets.
-// Display labels are i18n keys (translated at render / prompt build time).
+// Display labels are i18n keys (translated via the injected translator).
 
 import type {
   Exercise,
@@ -12,8 +12,9 @@ import type {
   NutritionTargets,
   Profile,
   Sex,
-} from '../types';
+} from './types';
 import {mealLabel} from './mealTimes';
+import type {Translate} from './translate';
 
 export const GOAL_LABEL_KEYS: Record<Goal, string> = {
   maintain: 'goal.maintain',
@@ -121,7 +122,7 @@ export interface ComputeInput {
   exercise: Exercise;
 }
 
-export function computeTargets(input: ComputeInput): NutritionTargets {
+export function computeTargets(input: ComputeInput, t: Translate): NutritionTargets {
   const mifflin = bmrMifflin(input.sex, input.weightKg, input.heightCm, input.age);
   const harris = bmrHarrisBenedict(input.sex, input.weightKg, input.heightCm, input.age);
   const average = (mifflin + harris) / 2;
@@ -143,7 +144,7 @@ export function computeTargets(input: ComputeInput): NutritionTargets {
     const share = MEAL_SPLIT[id];
     return {
       id,
-      label: mealLabel(id),
+      label: mealLabel(id, t),
       percent: Math.round(percent),
       kcal: Math.round(kcalPerPercent * percent),
       proteinG: Math.round(proteinG * share),
@@ -181,13 +182,17 @@ export function effectiveWeight(
 export function computeTargetsFromProfile(
   profile: Profile,
   bioWeightKg: number | undefined,
+  t: Translate,
 ): NutritionTargets {
-  return computeTargets({
-    sex: profile.sex,
-    age: profile.age,
-    heightCm: profile.height,
-    weightKg: effectiveWeight(profile, bioWeightKg),
-    goal: profile.goal,
-    exercise: profile.exercise,
-  });
+  return computeTargets(
+    {
+      sex: profile.sex,
+      age: profile.age,
+      heightCm: profile.height,
+      weightKg: effectiveWeight(profile, bioWeightKg),
+      goal: profile.goal,
+      exercise: profile.exercise,
+    },
+    t,
+  );
 }

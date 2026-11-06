@@ -33,8 +33,9 @@ There is **no backend and no database**. All data lives in `localStorage`
 |---|---|
 | Framework | React 19 |
 | Build | Vite 7 + TypeScript (strict) |
+| Repo layout | npm workspaces: `apps/web` (`@nutribio/web`) + `packages/core` (`@nutribio/core`, source-only, no deps) |
 | Styling | Tailwind CSS v4 (`@tailwindcss/vite`) |
-| AI | `@google/genai` ^2.x (lazy-loaded) |
+| AI | `@google/genai` ^2.x (lazy-loaded, web only) |
 | Charts | chart.js + react-chartjs-2 |
 | PWA | `vite-plugin-pwa` (generateSW, autoUpdate) |
 | Icons (PNG) | Python + PIL script (`scripts/generate_icons.py`) |
@@ -45,9 +46,9 @@ There is **no backend and no database**. All data lives in `localStorage`
 ## 3. Project structure
 
 The repo is an **npm-workspaces monorepo** (roadmap 4.1, DECISIONS #34):
-`apps/web` is the shipped PWA (Vite root, GitHub Pages). `packages/core`
-(roadmap 4.2) and `apps/api` (roadmap 4.4) will be added by their phases. App
-commands are always run per workspace from the root
+`apps/web` is the shipped PWA (Vite root, GitHub Pages), `packages/core` is the
+shared pure logic (roadmap 4.2, DECISIONS #35) and `apps/api` (Nuxt) arrives
+with roadmap 4.4. App commands are always run per workspace from the root
 (`npm run build -w @nutribio/web`); the root `package.json` only declares
 `workspaces`.
 
@@ -60,45 +61,68 @@ nutribio/
 │   ├── ARCHITECTURE.md          # this file
 │   ├── CHANGELOG.md             # mandatory change log
 │   └── DECISIONS.md             # decision log (ADR-style)
-├── .github/workflows/deploy.yml # build + deploy to GitHub Pages (push to main)
-└── apps/
-    └── web/                     # the shipped PWA
-        ├── package.json         # @nutribio/web — scripts + dependencies
-        ├── index.html           # viewport-fit=cover, manifest, apple meta
-        ├── vite.config.ts       # react + tailwind + VitePWA + base + allowedHosts
-        ├── tsconfig.json
-        ├── public/icons/        # icon-192/512.png, maskable-512.png
-        ├── scripts/             # generate_icons.py (PIL), check_i18n.mjs
+├── apps/
+│   └── web/                     # the shipped PWA
+│       ├── package.json         # @nutribio/web — scripts + dependencies
+│       ├── index.html           # viewport-fit=cover, manifest, apple meta
+│       ├── vite.config.ts       # react + tailwind + VitePWA + base + allowedHosts
+│       ├── tsconfig.json        # extends ../../tsconfig.base.json
+│       ├── public/icons/        # icon-192/512.png, maskable-512.png
+│       ├── scripts/             # generate_icons.py, check_i18n.mjs
+│       └── src/
+│           ├── main.tsx         # React root + SW registration + schema check + i18n init
+│           ├── App.tsx          # welcome/onboarding gate, tab/sidebar routing, settings overlay
+│           ├── index.css        # Tailwind v4 theme + global styles
+│           ├── types.ts         # app-only types (Settings, TabId)
+│           ├── i18n/
+│           │   ├── locales.ts   # active locale tracking (pure definitions live in core)
+│           │   ├── index.ts     # i18next runtime (lazy catalogs, changeLocale via re-init)
+│           │   └── catalogs/    # en-GB (source), pt-PT, pt-BR, es, fr, de, it (TS modules)
+│           ├── lib/
+│           │   ├── storage.ts   # localStorage keys, defaults, bio merge/remove, export/import
+│           │   ├── models.ts    # live model listing (ai.models.list)
+│           │   ├── gemini.ts    # SDK call + retry (prompt/schema/parsing come from core)
+│           │   └── units.ts     # locale-aware number/date formatting (delegates to core)
+│           ├── hooks/
+│           │   ├── useStore.tsx # global store + persistence + generatePlan
+│           │   └── useInstallPrompt.ts
+│           ├── components/      # TabBar/Sidebar, Field, dialogs, charts, meal cards, icons
+│           └── screens/         # Welcome, Onboarding, Today, Plan, Shopping, Progress, EditData, Settings
+└── packages/
+    └── core/                    # @nutribio/core — pure domain logic (see §3.1)
+        ├── package.json         # no runtime dependencies, source-only exports
+        ├── tsconfig.json        # ES2022 only (no DOM, no Node types)
         └── src/
-            ├── main.tsx         # React root + SW registration + schema check + i18n init
-            ├── App.tsx          # welcome/onboarding gate, tab/sidebar routing, settings overlay
-            ├── index.css        # Tailwind v4 theme + global styles
-            ├── types.ts         # all domain types
-            ├── i18n/
-            │   ├── locales.ts   # locale list, resolveLocale (device language), active locale
-            │   ├── index.ts     # i18next runtime (lazy catalogs, changeLocale via re-init)
-            │   └── catalogs/    # en-GB (source), pt-PT, pt-BR, es, fr, de, it (TS modules)
-            ├── lib/
-            │   ├── calculations.ts  # BMR/TDEE/targets/meal split + label KEYS
-            │   ├── countries.ts     # SUPPORTED_COUNTRIES + name/preselection helpers
-            │   ├── storage.ts       # localStorage keys, defaults, bio merge/remove
-            │   ├── gemini.ts        # prompt builder (English) + generateWeeklyPlan + normalizeWeek
-            │   ├── models.ts        # live model listing (ai.models.list)
-            │   ├── plan.ts          # assemblePlan, SLOT_ORDER/WEEK_ORDER, totals
-            │   ├── shopping.ts      # shopping list aggregation + quantity labels
-            │   ├── mealTimes.ts     # 5 meal slots, time windows, next-meal helpers (label KEYS)
-            │   ├── hash.ts          # FNV-1a
-            │   ├── errors.ts        # describeError (readable API errors)
-            │   └── units.ts         # locale-aware number/date formatting
-            ├── hooks/
-            │   ├── useStore.tsx         # global store + persistence + generatePlan
-            │   └── useInstallPrompt.ts  # beforeinstallprompt + standalone detection
-            ├── components/      # TabBar/Sidebar, Field, dialogs, charts, meal cards, icons
-            └── screens/         # Welcome, Onboarding, Today, Plan, Shopping, Progress, EditData, Settings
+            ├── types.ts, locales.ts, countries.ts, calculations.ts, mealTimes.ts,
+            ├── plan.ts, shopping.ts, hash.ts, errors.ts, format.ts,
+            ├── prompt.ts, schema.ts, normalize.ts
+            └── index.ts         # barrel
 ```
 
+### 3.1 `packages/core` boundaries (DECISIONS #35)
+
+- **Pure logic only**: domain types, locale definitions (`resolveLocale`,
+  labels, language names), countries, calculations, meal slots/plan helpers,
+  shopping aggregation, FNV-1a hash, `describeError`, `formatNumber`, the
+  Gemini prompt builder, the JSON schema and the response normalizers.
+- **No runtime dependencies** (no i18next, no `@google/genai`, no React) and
+  **no DOM/Node globals** (tsconfig `lib: ES2022`, `types: []`) so the same
+  code runs in the browser and in the future Nuxt server.
+- **No hidden state**: anything locale-dependent takes the locale explicitly
+  (`buildPrompt({locale})`, `formatNumber(…, intlLocale)`), and translated
+  labels take an injected translator `Translate` (`computeTargets(input, t)`,
+  `mealLabel(id, t)`, `normalizeWeek(raw, t)`). The mutable active-locale
+  tracker stays in `apps/web/src/i18n/locales.ts` (module state would leak
+  across requests on a server).
+- **Errors are codes**: `PlanParseError { code }` (`emptyResponse`,
+  `unparseable`, `badResponse`, `emptyPlan`) — the web maps them to
+  `errors.*` i18n keys.
+- The package is consumed as **TypeScript source** (`exports: "./src/index.ts"`)
+  by Vite and, later, Nitro; `apps/web`'s build runs `tsc --noEmit` on it too.
+
 Unless stated otherwise, module paths in the rest of this document are relative
-to `apps/web/` (modules that later move to `packages/core` say so explicitly).
+to `apps/web/`; modules that live in the shared package are written as
+`packages/core/src/...` (or `@nutribio/core` when imported).
 
 ## 4. Data model & storage
 
@@ -106,7 +130,7 @@ Storage keys (see `src/lib/storage.ts`): `nutribio.v1.profile`,
 `nutribio.v1.biometrics`, `nutribio.v1.plan`, `nutribio.v1.settings`,
 `nutribio.v1.schemaVersion` (currently 1).
 
-### Profile (`src/types.ts`)
+### Profile (`packages/core/src/types.ts`)
 ```ts
 interface Profile {
   name: string;
@@ -115,7 +139,7 @@ interface Profile {
   height: number;        // cm
   initialWeight: number; // kg
   goal: 'maintain' | 'lose_fat' | 'lose_weight' | 'gain_mass';
-  country: CountryCode;  // ISO alpha-2 from SUPPORTED_COUNTRIES (lib/countries.ts)
+  country: CountryCode;  // ISO alpha-2 from SUPPORTED_COUNTRIES (packages/core/src/countries.ts)
   exercise: {
     active: boolean;
     frequency: 'none' | '1_2' | '3_4' | '5_6' | '7';   // sessions/week
@@ -191,7 +215,7 @@ Defaults: `model = 'gemini-2.5-flash'`; `MODEL_OPTIONS` (static fallback):
 `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-3-flash-preview`,
 `gemini-3-pro-preview`.
 
-## 5. Calculations (`src/lib/calculations.ts`)
+## 5. Calculations (`packages/core/src/calculations.ts`)
 
 All numbers are computed locally; the Gemini prompt receives them.
 
@@ -217,25 +241,32 @@ All numbers are computed locally; the Gemini prompt receives them.
 Labels used in the UI are i18n **keys** here (`GOAL_LABEL_KEYS`,
 `SEX_LABEL_KEYS`, `FREQUENCY_LABEL_KEYS`, `INTENSITY_LABEL_KEYS`,
 `EXERCISE_TYPE_LABEL_KEYS`) — translated at render / prompt build time.
+`computeTargets(input, t)` / `computeTargetsFromProfile(profile, weight, t)`
+take the translator because `targets.mealSplit[].label` is a translated meal
+name; the web passes `coreT` (`apps/web/src/i18n/translate.ts`).
 
-## 6. Gemini integration (`src/lib/gemini.ts`)
+## 6. Gemini integration (`packages/core/src/{prompt,schema,normalize}.ts` + `apps/web/src/lib/gemini.ts`)
 
 ### Flow (`useStore.generatePlan` → lazy `import('../lib/gemini')`)
 1. Guard: profile + targets exist.
 2. Compute `inputsHash` (FNV-1a over `{profile, biometrics.latest, locale}`).
 3. `generateWeeklyPlan({apiKey, model, profile, bio, targets, weightKg})`:
-   - builds the prompt (`buildPrompt`, exported for testing);
+   - builds the prompt with the core `buildPrompt({profile, bio, targets,
+     weightKg, locale, t})` (exported for testing);
    - calls `ai.models.generateContent` with
      `responseMimeType: 'application/json'` + `responseJsonSchema` (structured
-     output), `temperature: 0.7`, `maxOutputTokens: 65536`;
+     output, core `PLAN_SCHEMA`), `temperature: 0.7`,
+     `maxOutputTokens: 65536`;
    - up to **2 attempts** (stage keys `generation.stage.generating` /
      `generation.stage.retrying`, translated by the UI);
-   - `extractJson` handles plain JSON / fenced code blocks / first `{…}` span;
-   - `normalizeWeek` validates and maps the response into `DayPlan[]`
-     (drops unknown days/slots, keeps max 4 variations, fills missing slots
-     with empty variations, throws `GeminiError` if nothing usable);
-   - returns `{week, overview, locale}` (the active locale the content was
-     generated in).
+   - core `parsePlanResponse(text, t)` → `extractJson` (plain JSON / fenced
+     code blocks / first `{…}` span) → `normalizeWeek` (drops unknown
+     days/slots, keeps max 4 variations, fills missing slots with empty
+     variations) + `normalizeShoppingItems`; unusable output raises
+     `PlanParseError` with a **code**, which the web maps to `errors.<code>`
+     and rethrows as `GeminiError`;
+   - returns `{week, overview, locale, shoppingItems}` (the active locale the
+     content was generated in).
 4. `assemblePlan(..., locale)` builds and stores the `Plan` with
    `generatedAt`, `inputsHash`, `locale`, snapshots, targets and the Gemini
    `overview`.
@@ -261,7 +292,7 @@ rules` (14 rules; rules 4–5 prefer country-typical protein sources and staple
 carbs; rule 14 follows the Supplements section) → "Return ONLY the JSON in
 the given schema."
 
-### Workout time & pre/post-workout meals (`src/lib/mealTimes.ts`)
+### Workout time & pre/post-workout meals (`packages/core/src/mealTimes.ts`)
 - `parseTimeToMinutes("HH:MM") → number | null`.
 - `workoutMealIds(minutes) → { preId, postId }`: `preId` = the meal slot whose
   window contains the workout time; if the time falls outside all windows
@@ -286,7 +317,7 @@ defensively; `normalizeShoppingItems` dedupes by key and falls back to
 `other` for unknown categories. All schema descriptions are in English and
 instruct the model to write content in the required output language.
 
-### Shopping list (`src/lib/shopping.ts`, DECISIONS #27)
+### Shopping list (`packages/core/src/shopping.ts`, DECISIONS #27)
 `buildShoppingList(week, shoppingItems)` sums `rawGrams` (fallback
 `amountGrams`) per canonical item across ALL dish variations — the list is a
 **suggestion** (the UI shows which dishes use each item and the disclaimer
@@ -299,10 +330,12 @@ name. The store keeps `shoppingChecks` (bought item keys) persisted per plan
 hash (`nutribio.v1.shoppingChecks`) — reset when a new plan is generated.
 
 ### Errors
-`GeminiError` for: missing key, empty response, unparseable JSON, empty plan,
-repeated failures — messages are localized via i18n keys (`errors.*`) at throw
-time. The store surfaces `generationError` to the UI. Real API errors are NOT
-swallowed: `describeError()` (`src/lib/errors.ts`) extracts a readable message
+Core raises `PlanParseError` with a **code** (`emptyResponse`, `unparseable`,
+`badResponse`, `emptyPlan`); `apps/web/src/lib/gemini.ts` translates the code
+to the `errors.<code>` i18n key and rethrows it as `GeminiError`, which also
+covers missing key and repeated failures. The store surfaces
+`generationError` to the UI. Real API errors are NOT swallowed:
+`describeError()` (`packages/core/src/errors.ts`) extracts a readable message
 from the SDK's errors (including the embedded API JSON body, e.g. "400
 INVALID_ARGUMENT: API key not valid"), and `generateWeeklyPlan` rethrows
 `GeminiError(t('errors.apiFailed', {detail}))` so the global toast shows the
@@ -314,7 +347,13 @@ falls back to the static list when the API returns nothing compatible
 - Locales: `pt-PT`, `pt-BR`, `en-GB` (fallback), `es`, `fr`, `de`, `it`.
   `resolveLocale(navigator.languages)`: `pt-BR`→pt-BR, any other `pt-*`→pt-PT,
   `en-*`→en-GB, es/fr/de/it match, else en-GB. Override stored in
-  `settings.locale` (`'auto' | Locale`).
+  `settings.locale` (`'auto' | Locale`). The pure definitions
+  (`LOCALES`, `resolveLocale`, label/language maps, `normalizeLocaleSetting`)
+  live in `packages/core/src/locales.ts`; `src/i18n/locales.ts` re-exports
+  them and owns the mutable **active locale** tracker used by the UI.
+- `src/i18n/translate.ts` exports `coreT`, the `Translate` adapter that binds
+  core label lookups to i18next (used by `useStore`, Today, EditData and the
+  Gemini wrapper).
 - Catalogs: TS modules in `src/i18n/catalogs/` (313 keys each); en-GB is the
   source of truth and is statically imported; the other six are lazy chunks.
 - i18next v26 registers resources only via `init({resources})` (no
@@ -323,20 +362,22 @@ falls back to the static list when the API returns nothing compatible
 - `main.tsx` awaits `initI18n(loadSettings().locale)` before the first render;
   `<html lang>` follows the active locale; `units.ts` and `NumberInput` use
   the active locale's decimal separator (input still accepts comma or dot).
-- `npm run i18n:check` (`scripts/check_i18n.mjs`, esbuild-based) enforces key
-  parity + interpolation placeholders across all 7 catalogs; chained into
-  `npm run build`.
+  `units.ts` delegates number formatting to core `formatNumber`.
+- `npm run i18n:check -w @nutribio/web` (`apps/web/scripts/check_i18n.mjs`,
+  esbuild-based) enforces key parity + interpolation placeholders across all
+  7 catalogs; chained into `npm run build -w @nutribio/web`.
 
-### Countries (`src/lib/countries.ts`)
+### Countries (`packages/core/src/countries.ts`)
 `SUPPORTED_COUNTRIES = [PT, BR, ES, FR, DE, IT, NL, BE, IE, AT, LU, GB]`
 (curated list, DECISIONS #26). `Profile.country` is required — collected in
 onboarding step 1, editable in Dados, carried through every profile write;
 old profiles are normalized (preselected from device region / app locale via
-`defaultCountryFor`). Names via `Intl.DisplayNames` in the active locale.
+`defaultCountryFor(candidates, locale)` — the locale is explicit in core).
+Names via `Intl.DisplayNames` in the active locale.
 The country drives the prompt cuisine hints (now) and will drive Stripe
 currency (item 3) and legal regime (item 5).
 
-## 7. Live model listing (`src/lib/models.ts`)
+## 7. Live model listing (`apps/web/src/lib/models.ts`)
 
 - `fetchAvailableModels(apiKey)` → `ai.models.list({config: {pageSize: 100}})`
   iterated with `for await` (paginated), then `filterModels`.
@@ -347,7 +388,7 @@ currency (item 3) and legal regime (item 5).
 - Used by Settings (lazy import, refetch on key change / "Atualizar" button);
   falls back to static `MODEL_OPTIONS` without a key or on error.
 
-## 8. State management (`src/hooks/useStore.tsx`)
+## 8. State management (`apps/web/src/hooks/useStore.tsx`)
 
 React Context (`StoreProvider` + `useStore`). State: `profile`,
 `biometrics`, `plan`, `settings` (+ `isGenerating`, `generationStage`,
@@ -550,15 +591,22 @@ The site is deployed as a GitHub Pages **project site** at
 
 ## 13. Testing & verification
 
-- `npm run build -w @nutribio/web` — i18n parity check + strict TS + production
+- `npm run build -w @nutribio/web` — i18n parity check + `tsc --noEmit` on
+  `packages/core` (no DOM/Node libs) + strict TS on the web app + production
   build (output in `apps/web/dist/`); also check the chunk layout (the Gemini
-  SDK and the 6 lazy catalogs must stay out of the main bundle).
+  SDK, the prompt/schema/normalize code and the 6 lazy catalogs must stay out
+  of the main bundle — the prompt lands in the lazy `gemini` chunk).
+- `npm run typecheck -w @nutribio/core` — core-only type check.
 - Pure-logic tests: bundle a scratch entry with
   `npx esbuild <file> --bundle --format=cjs --platform=node` and run with
   node (used previously for `normalizeWeek`, `computeTargets`, `filterModels`,
   `buildPrompt`). Use `--format=cjs` because `@google/genai` needs CJS. The
   scratch entry must live inside the repo (or next to a `node_modules`
   symlink) so package imports resolve.
+- Golden-equivalence checks (used for the 4.2 extraction): snapshot the
+  outputs of the pure functions before/after a refactor (targets, prompt text
+  per locale, `inputsHash`, normalization, shopping aggregation, meal-time
+  helpers) and diff them — a byte-identical result proves no behavior change.
 - UI flows (verified historically with browser-harness CDP against the dev
   server): onboarding 3 steps + skip, confirm-dialog gating, calculations
   summary values, bioimpedance history add/edit/delete, model dropdown

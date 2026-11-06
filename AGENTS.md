@@ -50,7 +50,7 @@ The most critical ones:
    Never bake it into the bundle or read it from env vars in production
    (the user explicitly rejected env vars because they are extractable from
    the shipped JS). `.env.example` is documentation only.
-3. **Deterministic nutrition math is local** (`apps/web/src/lib/calculations.ts`);
+3. **Deterministic nutrition math is local** (`packages/core/src/calculations.ts`);
    Gemini receives the computed targets and only does the creative work
    (dishes, gram portions, weekly plan).
 4. **Regeneration is ALWAYS user-confirmed** (dialog). Never auto-call the
@@ -70,26 +70,39 @@ workspace (there are no app scripts in the root `package.json`).
 
 - `npm install` — install all workspaces (root `package-lock.json`)
 - `npm run dev -w @nutribio/web` — dev server (http://localhost:5173; host allowed: `nbio.loca.lt`)
-- `npm run build -w @nutribio/web` — i18n parity check (`i18n:check`) + type-check (`tsc --noEmit`, strict) + production build to `apps/web/dist/`
+- `npm run build -w @nutribio/web` — i18n parity check (`i18n:check`) + core type-check + web type-check (`tsc --noEmit`, strict) + production build to `apps/web/dist/`
+- `npm run typecheck -w @nutribio/core` — type-check the shared package only
 - `npm run preview -w @nutribio/web` — serve the production build
 - `npm run i18n:check -w @nutribio/web` — verify key parity + interpolation placeholders across all 7 locale catalogs
 - `npm run icons -w @nutribio/web` — regenerate PWA icons (Python + PIL, `apps/web/scripts/generate_icons.py`)
+
+## Hard rules for `packages/core`
+
+- No runtime dependencies, no DOM/Node globals (tsconfig has `lib: ES2022`,
+  `types: []`) — the future API imports it too.
+- No hidden state: pass the `locale` explicitly and the `Translate` function
+  for labels (web adapter: `apps/web/src/i18n/translate.ts` → `coreT`).
+- Failures are **codes** (`PlanParseError`), never translated strings.
 
 ## Quick map
 
 | Path | Responsibility |
 |---|---|
 | `apps/web/` | the shipped PWA (Vite root: `index.html`, `vite.config.ts`, `public/`, `scripts/`) |
-| `apps/web/src/i18n/` | i18n runtime + locale resolution (`locales.ts`) and the 7 catalogs (`catalogs/`) |
-| `apps/web/src/lib/calculations.ts` | BMR (Mifflin-St Jeor + Harris-Benedict), TDEE, calorie ranges, macros, meal split |
-| `apps/web/src/lib/countries.ts` | `SUPPORTED_COUNTRIES` + country names/preselection (drives prompt cuisine) |
-| `apps/web/src/lib/gemini.ts` | Gemini plan generation (English prompt + output-language + country blocks, structured JSON output, validation, retry) |
+| `packages/core/` | `@nutribio/core` — pure shared logic (no deps, no DOM): types, locales, countries, calculations, meal slots/plan, shopping, hash, prompt, JSON schema, normalizers |
+| `apps/web/src/i18n/` | i18n runtime + active-locale tracker (`locales.ts`), `Translate` adapter (`translate.ts`) and the 7 catalogs (`catalogs/`) |
+| `packages/core/src/calculations.ts` | BMR (Mifflin-St Jeor + Harris-Benedict), TDEE, calorie ranges, macros, meal split |
+| `packages/core/src/countries.ts` | `SUPPORTED_COUNTRIES` + country names/preselection (drives prompt cuisine) |
+| `packages/core/src/prompt.ts` | Gemini prompt builder (English instructions + output-language + country blocks) |
+| `packages/core/src/schema.ts` | Gemini structured-output JSON schema (`PLAN_SCHEMA`) |
+| `packages/core/src/normalize.ts` | Response parsing/validation (`parsePlanResponse`, `normalizeWeek`) — errors as codes |
+| `apps/web/src/lib/gemini.ts` | Gemini SDK call + retry; maps core parse error codes to localized messages |
 | `apps/web/src/lib/models.ts` | Live Gemini model listing for the Settings dropdown |
 | `apps/web/src/lib/storage.ts` | localStorage keys, defaults, bio record merge/remove, export/import |
-| `apps/web/src/lib/plan.ts` | Plan assembly + query helpers (selected dish, day/week totals) |
-| `apps/web/src/lib/shopping.ts` | Shopping list aggregation + quantity labels (Compras tab) |
-| `apps/web/src/lib/mealTimes.ts` | 5 meal slots + time windows, next-meal helpers |
-| `apps/web/src/lib/hash.ts` | FNV-1a inputs hash (plan cache invalidation; includes locale) |
+| `packages/core/src/plan.ts` | Plan assembly + query helpers (selected dish, day/week totals) |
+| `packages/core/src/shopping.ts` | Shopping list aggregation + quantity labels (Compras tab) |
+| `packages/core/src/mealTimes.ts` | 5 meal slots + time windows, next-meal helpers |
+| `packages/core/src/hash.ts` | FNV-1a inputs hash (plan cache invalidation; includes locale) |
 | `apps/web/src/hooks/useStore.tsx` | Global state + persistence + plan generation action |
 | `apps/web/src/screens/*` | Welcome (first-use landing gate), Onboarding (3-step wizard), Today, Plan, Shopping (Compras), Progress, EditData (Dados), Settings |
 | `apps/web/src/components/*` | TabBar/Sidebar, forms (Field/NumberInput/TextArea), dialogs, charts, meal cards |

@@ -2,16 +2,14 @@
 // pt-* locales, dot for en/es/fr/de/it — the app locale decides).
 // NumberInput still accepts both separators (DECISIONS #9).
 
+import {formatNumber} from '@nutribio/core';
+
 import {activeIntlLocale} from '../i18n/locales';
 
 const nf = new Intl.NumberFormat(activeIntlLocale(), {maximumFractionDigits: 1});
 
 export function fmt(value: number | undefined | null, digits = 0): string {
-  if (value === undefined || value === null || Number.isNaN(value)) return '—';
-  return new Intl.NumberFormat(activeIntlLocale(), {
-    maximumFractionDigits: digits,
-    minimumFractionDigits: 0,
-  }).format(value);
+  return formatNumber(value, digits, activeIntlLocale());
 }
 
 export function fmtKcal(value: number | undefined | null): string {

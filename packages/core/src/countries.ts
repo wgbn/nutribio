@@ -3,7 +3,7 @@
 // prompt, Stripe currency (later, item 3) and the applicable legal regime
 // (later, item 5). Language follows the app locale; cuisine follows country.
 
-import {activeLocale} from '../i18n/locales';
+import type {Locale} from './locales';
 
 /**
  * Curated list (owner decision 2026-10-06): main/most relevant EU countries
@@ -66,10 +66,11 @@ const LOCALE_DEFAULT_COUNTRY: Record<string, CountryCode> = {
  * 1. device region when supported (de-AT -> AT, pt-BR -> BR, en-GB -> GB…);
  * 2. else the app locale's default country;
  * 3. else DEFAULT_COUNTRY.
+ * The locale is explicit (core holds no active-locale state).
  */
 export function defaultCountryFor(
   candidates: readonly string[],
-  locale = activeLocale(),
+  locale: Locale,
 ): CountryCode {
   for (const tag of candidates) {
     const match = /^([a-zA-Z]{2,3})[-_]([a-zA-Z]{2}|\d{3})$/.exec(tag.trim());

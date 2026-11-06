@@ -1,9 +1,18 @@
 // localStorage persistence for Nutribio.
 // All data is local and single-device by design (no backend, no sync).
 
-import type {BioRecord, BiometricsState, Plan, Profile, Settings} from '../types';
-import {normalizeLocaleSetting} from '../i18n/locales';
-import {defaultCountryFor, isSupportedCountry} from './countries';
+import {
+  defaultCountryFor,
+  isSupportedCountry,
+  normalizeLocaleSetting,
+  type BioRecord,
+  type BiometricsState,
+  type Plan,
+  type Profile,
+} from '@nutribio/core';
+
+import {activeLocale} from '../i18n/locales';
+import type {Settings} from '../types';
 
 const NAMESPACE = 'nutribio.v1';
 const SCHEMA_VERSION_KEY = `${NAMESPACE}.schemaVersion`;
@@ -47,7 +56,7 @@ export const loadProfile = (): Profile | null => {
     // Old profiles have no country: preselect from the device (DECISIONS #26).
     country: isSupportedCountry(p.country)
       ? p.country
-      : defaultCountryFor(navigator.languages ?? [navigator.language]),
+      : defaultCountryFor(navigator.languages ?? [navigator.language], activeLocale()),
     exercise: {
       ...p.exercise,
       workoutTime: p.exercise.workoutTime ?? '',

@@ -4,6 +4,8 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
+import {describeError} from '@nutribio/core';
+
 import {ConfirmDialog} from '../components/ConfirmDialog';
 import {Field, Select, TextArea, TextInput} from '../components/Field';
 import {DownloadIcon, RefreshIcon, TrashIcon, UploadIcon, XIcon} from '../components/icons';
@@ -56,7 +58,6 @@ export function Settings({onClose}: {onClose: () => void}) {
         setModels(list);
       }
     } catch (err) {
-      const {describeError} = await import('../lib/errors');
       setModelsErrorMsg(describeError(err));
       setModels(null);
     } finally {

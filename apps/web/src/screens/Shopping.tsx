@@ -5,17 +5,19 @@
 import {useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
+import {
+  buildShoppingList,
+  MEAL_LABEL_KEYS,
+  SHOPPING_CATEGORY_ORDER,
+  WEEKDAY_KEY,
+  type ShoppingCategory,
+  type ShoppingRow,
+} from '@nutribio/core';
+
 import {CartIcon, CheckIcon, CopyIcon, GearIcon, ShareIcon} from '../components/icons';
 import {GeneratePlanButton} from '../components/GeneratePlanButton';
 import {useStore} from '../hooks/useStore';
-import {MEAL_LABEL_KEYS, WEEKDAY_KEY} from '../lib/mealTimes';
-import {
-  buildShoppingList,
-  SHOPPING_CATEGORY_ORDER,
-  type ShoppingRow,
-} from '../lib/shopping';
 import {fmt} from '../lib/units';
-import type {ShoppingCategory} from '../types';
 
 const CATEGORY_KEYS: Record<ShoppingCategory, string> = {
   produce: 'shopping.category.produce',

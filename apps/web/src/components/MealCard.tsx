@@ -3,10 +3,9 @@
 
 import {useTranslation} from 'react-i18next';
 
-import type {Macros, MealSlot} from '../types';
-import {getSelectedDish} from '../lib/plan';
+import {getSelectedDish, type Macros, type MealSlot, type WorkoutBadge} from '@nutribio/core';
+
 import {fmt} from '../lib/units';
-import type {WorkoutBadge} from '../lib/mealTimes';
 
 export function MacroChips({macros}: {macros: Macros}) {
   const {t} = useTranslation();

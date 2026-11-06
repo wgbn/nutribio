@@ -12,8 +12,9 @@ import type {
   Profile,
   ShoppingItem,
   WeekDayId,
-} from '../types';
+} from './types';
 import {MEAL_SLOTS, mealLabel, timeWindowLabel} from './mealTimes';
+import type {Translate} from './translate';
 
 export const SLOT_ORDER: MealSlotId[] = [
   'breakfast',
@@ -33,9 +34,9 @@ export const WEEK_ORDER: WeekDayId[] = [
   'sunday',
 ];
 
-export function emptyMealSlot(id: MealSlotId): MealSlot {
+export function emptyMealSlot(id: MealSlotId, t: Translate): MealSlot {
   const def = MEAL_SLOTS.find((s) => s.id === id)!;
-  return {id, label: mealLabel(id), timeWindow: timeWindowLabel(def), variations: [], selectedIndex: 0};
+  return {id, label: mealLabel(id, t), timeWindow: timeWindowLabel(def), variations: [], selectedIndex: 0};
 }
 
 export function getSelectedDish(meal: MealSlot): Dish | null {

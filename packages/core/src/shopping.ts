@@ -3,7 +3,7 @@
 // ingredients: totals per canonical item, practical units and the dishes
 // each item is used in. The LLM only canonicalizes; the math is ours.
 
-import type {DayPlan, MealSlotId, ShoppingCategory, ShoppingItem, WeekDayId} from '../types';
+import type {DayPlan, MealSlotId, ShoppingCategory, ShoppingItem, WeekDayId} from './types';
 
 /** One aggregated shopping row (per canonical shopping item). */
 export interface ShoppingRow {

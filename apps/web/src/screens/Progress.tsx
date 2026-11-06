@@ -3,12 +3,13 @@
 import {useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
+import {type BioRecord} from '@nutribio/core';
+
 import {ChartBlock} from '../components/ChartBlock';
 import {GearIcon, ScaleIcon} from '../components/icons';
 import {useStore} from '../hooks/useStore';
 import {activeIntlLocale} from '../i18n/locales';
 import {fmt, fmtDate} from '../lib/units';
-import type {BioRecord} from '../types';
 
 type MetricKey = 'weight' | 'bodyFat' | 'bmi' | 'muscle' | 'water' | 'protein';
 

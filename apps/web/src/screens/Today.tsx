@@ -4,23 +4,26 @@
 import {useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 
+import {
+  currentMealSlot,
+  dayTotals,
+  getSelectedDish,
+  nextMeals,
+  startsInLabel,
+  timeWindowLabel,
+  todayKey,
+  workoutBadgeFor,
+  type WeekDayId,
+} from '@nutribio/core';
+
 import {DishSwitcher} from '../components/DishSwitcher';
 import {GeneratePlanButton} from '../components/GeneratePlanButton';
 import {GearIcon, RestaurantIcon, SparklesIcon} from '../components/icons';
 import {MacroBar} from '../components/MacroBar';
 import {MacroChips} from '../components/MealCard';
 import {useStore} from '../hooks/useStore';
-import {
-  currentMealSlot,
-  nextMeals,
-  startsInLabel,
-  timeWindowLabel,
-  todayKey,
-  workoutBadgeFor,
-} from '../lib/mealTimes';
-import {dayTotals, getSelectedDish} from '../lib/plan';
+import {coreT} from '../i18n/translate';
 import {fmt, fmtDate} from '../lib/units';
-import type {WeekDayId} from '../types';
 
 const WEEKDAY_MAP: WeekDayId[] = [
   'sunday',
@@ -208,7 +211,7 @@ export function Today({
                 <div className="mt-2">
                   <p className="text-lg font-bold text-slate-800">{t(upcoming[0].slot.labelKey)}</p>
                   <p className="text-sm text-slate-500">
-                    {timeWindowLabel(upcoming[0].slot)} · {startsInLabel(upcoming[0].startsInMinutes)}
+                    {timeWindowLabel(upcoming[0].slot)} · {startsInLabel(upcoming[0].startsInMinutes, coreT)}
                   </p>
                 </div>
               ) : null}
@@ -294,7 +297,7 @@ export function Today({
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-xs font-medium text-emerald-600">
-                        {startsInLabel(startsInMinutes)}
+                        {startsInLabel(startsInMinutes, coreT)}
                       </p>
                       <p className="text-xs tabular-nums text-slate-400">
                         {timeWindowLabel(slot)}

@@ -1,9 +1,9 @@
 // Meal slot definitions with their time windows (minutes since midnight).
 // Display labels are i18n keys (translated at render / prompt build time).
+// Core is i18n-runtime free: label lookups take an injected translator.
 
-import i18next from 'i18next';
-
-import type {MealSlotId, WeekDayId} from '../types';
+import type {MealSlotId, WeekDayId} from './types';
+import type {Translate} from './translate';
 
 export interface MealSlotDef {
   id: MealSlotId;
@@ -28,9 +28,9 @@ export const MEAL_LABEL_KEYS: Record<MealSlotId, string> = {
   dinner: 'meal.dinner',
 };
 
-/** Translated meal label (active locale) — used by the prompt and plan cache. */
-export function mealLabel(id: MealSlotId): string {
-  return i18next.t(MEAL_LABEL_KEYS[id]);
+/** Translated meal label in the caller's language — used by the prompt and plan cache. */
+export function mealLabel(id: MealSlotId, t: Translate): string {
+  return t(MEAL_LABEL_KEYS[id]);
 }
 
 export function formatMinutes(minutes: number): string {
@@ -122,13 +122,13 @@ export function nextMeals(date: Date = new Date(), count = 4): NextMeal[] {
 }
 
 /** Translated "starts in …" label for a number of minutes from now. */
-export function startsInLabel(minutes: number): string {
-  if (minutes <= 0) return i18next.t('time.now');
+export function startsInLabel(minutes: number, t: Translate): string {
+  if (minutes <= 0) return t('time.now');
   const h = Math.floor(minutes / 60);
   const m = Math.round(minutes % 60);
-  if (h === 0) return i18next.t('time.inMinutes', {m});
-  if (m === 0) return i18next.t('time.inHours', {h});
-  return i18next.t('time.inHoursMinutes', {h, m});
+  if (h === 0) return t('time.inMinutes', {m});
+  if (m === 0) return t('time.inHours', {h});
+  return t('time.inHoursMinutes', {h, m});
 }
 
 /** i18n keys for weekday names (Plan screen). */
@@ -141,17 +141,6 @@ export const WEEKDAY_KEY: Record<WeekDayId, string> = {
   saturday: 'day.saturday',
   sunday: 'day.sunday',
 };
-
-/** Order used by the Plan screen: Monday-first (PT convention). */
-export const WEEK_ORDER = [
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-  'sunday',
-] as const;
 
 export function todayKey(): string {
   const d = new Date();

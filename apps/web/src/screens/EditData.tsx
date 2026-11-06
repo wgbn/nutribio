@@ -5,32 +5,33 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
-import {ChipGroup, Checkbox, Field, NumberInput, Select, TextInput} from '../components/Field';
-import {ConfirmDialog} from '../components/ConfirmDialog';
-import {CheckIcon, GearIcon, PencilIcon, SparklesIcon, TrashIcon} from '../components/icons';
-import {useStore} from '../hooks/useStore';
-import {activeIntlLocale} from '../i18n/locales';
 import {
   computeTargets,
+  countryOptions,
+  todayKey,
   EXERCISE_TYPE_LABEL_KEYS,
   FREQUENCY_LABEL_KEYS,
   GOAL_LABEL_KEYS,
   INTENSITY_LABEL_KEYS,
   SEX_LABEL_KEYS,
-} from '../lib/calculations';
-import {countryOptions, type CountryCode} from '../lib/countries';
-import {todayKey} from '../lib/mealTimes';
+  type BioRecord,
+  type CountryCode,
+  type ExerciseFrequency,
+  type ExerciseIntensity,
+  type ExerciseType,
+  type Goal,
+  type Profile,
+  type Sex,
+  type Supplements,
+} from '@nutribio/core';
+
+import {ChipGroup, Checkbox, Field, NumberInput, Select, TextInput} from '../components/Field';
+import {ConfirmDialog} from '../components/ConfirmDialog';
+import {CheckIcon, GearIcon, PencilIcon, SparklesIcon, TrashIcon} from '../components/icons';
+import {useStore} from '../hooks/useStore';
+import {activeIntlLocale} from '../i18n/locales';
+import {coreT} from '../i18n/translate';
 import {fmt, fmtDate} from '../lib/units';
-import type {
-  BioRecord,
-  ExerciseFrequency,
-  ExerciseIntensity,
-  ExerciseType,
-  Goal,
-  Profile,
-  Sex,
-  Supplements,
-} from '../types';
 
 type Num = number | '';
 
@@ -249,19 +250,22 @@ export function EditData({
   /** Live preview of the calculations, using the form values. */
   const previewTargets = useMemo(() => {
     if (!basicValid) return null;
-    return computeTargets({
-      sex: form.sex,
-      age: Number(form.age),
-      heightCm: Number(form.height),
-      weightKg: Number(form.bio.weight !== '' ? form.bio.weight : form.initialWeight),
-      goal: form.goal,
-      exercise: {
-        active: form.exerciseActive,
-        frequency: form.exerciseActive ? form.frequency : 'none',
-        intensity: form.intensity,
-        type: form.type,
+    return computeTargets(
+      {
+        sex: form.sex,
+        age: Number(form.age),
+        heightCm: Number(form.height),
+        weightKg: Number(form.bio.weight !== '' ? form.bio.weight : form.initialWeight),
+        goal: form.goal,
+        exercise: {
+          active: form.exerciseActive,
+          frequency: form.exerciseActive ? form.frequency : 'none',
+          intensity: form.intensity,
+          type: form.type,
+        },
       },
-    });
+      coreT,
+    );
   }, [basicValid, form]);
 
   const hasBioData = useMemo(

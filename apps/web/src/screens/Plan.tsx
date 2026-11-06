@@ -3,15 +3,21 @@
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
+import {
+  dayTotals,
+  getSelectedDish,
+  WEEKDAY_KEY,
+  WEEK_ORDER,
+  workoutBadgeFor,
+  type WeekDayId,
+} from '@nutribio/core';
+
 import {GeneratePlanButton} from '../components/GeneratePlanButton';
 import {GearIcon, SparklesIcon} from '../components/icons';
 import {MacroBar} from '../components/MacroBar';
 import {MealCard} from '../components/MealCard';
 import {useStore} from '../hooks/useStore';
 import {fmtDateTime} from '../lib/units';
-import {WEEKDAY_KEY, WEEK_ORDER, workoutBadgeFor} from '../lib/mealTimes';
-import {dayTotals, getSelectedDish} from '../lib/plan';
-import type {WeekDayId} from '../types';
 
 const DAY_KEYS = [...WEEK_ORDER] as WeekDayId[];
 

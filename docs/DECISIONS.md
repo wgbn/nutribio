@@ -477,3 +477,41 @@ content detection is now scoped to `apps/web`, so two utilities that were only
 matched from repo-root markdown (`.table`, `.rounded`, both unused in the app)
 disappeared from the CSS (~50 bytes smaller). The root `dist/` from the old
 layout is a stale ignored artefact and can be deleted.
+
+#35. 2026-11-06 — `packages/core`: source-only, dependency-free, state-free shared logic
+**Context:** Roadmap 4.2 (Wave 5) — the future Nuxt API must compute the same
+targets and build the same prompt as the web app. The pure logic lived in
+`apps/web/src/lib` and depended on i18next (translating labels at call time),
+on the web's module-level "active locale" and on the Gemini SDK.
+**Decision:** `@nutribio/core` holds the shared pure logic: domain types,
+pure locale definitions (`resolveLocale`, labels, language names,
+`normalizeLocaleSetting`), countries, calculations, meal slots, plan helpers,
+shopping aggregation, FNV-1a hash, `describeError`, `formatNumber`, the prompt
+builder, the JSON schema and the response normalizers. Constraints:
+- **No runtime dependencies** (no i18next, no `@google/genai`, no React) and
+  **no DOM/Node globals** — `packages/core/tsconfig.json` sets
+  `lib: ["ES2022"]` and `types: []`, and `apps/web`'s build type-checks core
+  with that config.
+- **No hidden state**: locale-dependent helpers take the locale explicitly
+  (`buildPrompt({locale})`, `formatNumber(v, d, intlLocale)`,
+  `defaultCountryFor(candidates, locale)`) and label lookups take an injected
+  `Translate` (`computeTargets(input, t)`, `mealLabel(id, t)`,
+  `emptyMealSlot(id, t)`, `normalizeWeek(raw, t)`, `startsInLabel(m, t)`). The
+  mutable active-locale tracker stays in `apps/web/src/i18n/locales.ts`
+  (module state would leak across requests on a server); the web adapter is
+  `apps/web/src/i18n/translate.ts` (`coreT`).
+- **Errors are codes**: `PlanParseError { code: 'emptyResponse' |
+  'unparseable' | 'badResponse' | 'emptyPlan' }`; the web maps them to
+  `errors.<code>` keys and rethrows `GeminiError`. This prepares the API error
+  boundary.
+- Consumed as **TypeScript source** (`exports: "." → "./src/index.ts"`, no
+  build step, `sideEffects: false`); the `@google/genai` call, `storage`,
+  `models`, `units` and the i18n runtime/catalogs stay in `apps/web`.
+**Consequences:** Zero behavior change, proven by golden snapshots taken
+before/after the extraction (identical prompt text in 4 locales, identical
+`planInputsHash` for the same inputs — so cached plans do not go stale —
+identical targets, normalization, shopping list, meal-time helpers, error
+paths and formatting). The prompt/schema code stays in the lazy `gemini`
+chunk (not in the main bundle). The API (4.7) will need a `Translate`
+implementation for the domain labels used in the prompt — decided then
+(core does not ship catalogs).

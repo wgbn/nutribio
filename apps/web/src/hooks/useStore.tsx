@@ -3,21 +3,26 @@
 import {createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode} from 'react';
 import i18next from 'i18next';
 
-import type {
-  BioRecord,
-  BiometricsState,
-  MealSlotId,
-  NutritionTargets,
-  Plan,
-  Profile,
-  Settings,
-  WeekDayId,
-} from '../types';
+import {
+  assemblePlan,
+  computeTargetsFromProfile,
+  effectiveWeight,
+  parseTimeToMinutes,
+  planInputsHash,
+  workoutMealIds,
+  type BioRecord,
+  type BiometricsState,
+  type MealSlotId,
+  type NutritionTargets,
+  type Plan,
+  type Profile,
+  type WeekDayId,
+  type WorkoutMeals,
+} from '@nutribio/core';
+
 import {activeLocale} from '../i18n/locales';
-import {computeTargetsFromProfile, effectiveWeight} from '../lib/calculations';
-import {planInputsHash} from '../lib/hash';
-import {parseTimeToMinutes, workoutMealIds, type WorkoutMeals} from '../lib/mealTimes';
-import {assemblePlan} from '../lib/plan';
+import {coreT} from '../i18n/translate';
+import type {Settings} from '../types';
 import {
   clearAllData,
   loadBiometrics,
@@ -106,7 +111,7 @@ export function StoreProvider({children}: {children: ReactNode}) {
 
   const targets = useMemo(() => {
     if (!profile) return null;
-    return computeTargetsFromProfile(profile, biometrics.latest?.weight);
+    return computeTargetsFromProfile(profile, biometrics.latest?.weight, coreT);
   }, [profile, biometrics.latest]);
 
   /** Pre/post-workout meal ids derived from the profile's workout time. */

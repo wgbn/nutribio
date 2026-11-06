@@ -1,6 +1,6 @@
 # 04 — Backend & storage (Nuxt API + Supabase)
 
-**Status:** ◐ In progress (2026-11-06 — 4.1 monorepo done; 4.2 `packages/core` in progress)
+**Status:** ◐ In progress (2026-11-06 — 4.1 monorepo + 4.2 `packages/core` done; 4.3+ pending owner dependencies)
 
 **Note:** this item **supersedes DECISIONS #1** (100% frontend, no backend).
 The decision was taken explicitly by the owner on 2026-10-06 (DECISIONS #22).
@@ -104,6 +104,12 @@ DECISIONS #3 and #13).
 - [ ] Web Push notifications for finished generations (later).
 - [ ] Rate limits & quotas per endpoint.
 - [ ] Multi-device conflicts (last-write-wins is fine for v1?).
+- [ ] Server-side `Translate` for the prompt labels (4.7): core does not ship
+      catalogs, so the API needs an implementation for the domain labels
+      (meal/goal/sex/frequency/…) used in the prompt. Options: ship the label
+      subset of the catalogs in core, or have the API import the web catalogs.
+- [ ] Where the `@google/genai` dependency lives once the API generates plans
+      (4.6/4.7): core stays dependency-free, so the SDK call moves to `apps/api`.
 
 ## Phases
 
@@ -122,18 +128,18 @@ DECISIONS #3 and #13).
       dev server smoke.
 
 ### 4.2 Extract `packages/core` (pure logic + tests)
-- [ ] `packages/core` (`@nutribio/core`): source-only exports, **no runtime
+- [x] `packages/core` (`@nutribio/core`): source-only exports, **no runtime
       dependencies**, `tsconfig` without DOM/Node libs (DECISIONS #35).
-- [ ] Move: domain types, pure locale definitions, countries, calculations,
+- [x] Move: domain types, pure locale definitions, countries, calculations,
       mealTimes, plan, shopping, hash, `describeError`, `formatNumber`,
       prompt builder, JSON schema, normalizers.
-- [ ] Remove hidden state: injected `Translate` + explicit `locale`; parse
+- [x] Remove hidden state: injected `Translate` + explicit `locale`; parse
       errors become codes.
-- [ ] Web keeps: `storage`, `models`, `units`, i18n runtime + catalogs,
+- [x] Web keeps: `storage`, `models`, `units`, i18n runtime + catalogs,
       active-locale tracker and the `@google/genai` call.
-- [ ] Golden-equivalence check (esbuild scratch): byte-identical prompt in
+- [x] Golden-equivalence check (esbuild scratch): byte-identical prompt in
       4 locales, identical `inputsHash`, targets, normalization, shopping.
-- [ ] Docs: ARCHITECTURE §3.1, DECISIONS #35, CHANGELOG.
+- [x] Docs: ARCHITECTURE §3.1, DECISIONS #35, CHANGELOG.
 
 ### 4.3 Supabase project (EU) + migrations + RLS + Auth providers/OTP email
       templates (7 languages) + SMTP.
@@ -166,3 +172,11 @@ DECISIONS #3 and #13).
   lockfile, CI builds `-w @nutribio/web` and uploads `apps/web/dist`, docs
   paths updated). Zero behavior change — verified by bundle parity against the
   pre-move baseline plus a dev-server smoke test. DECISIONS #34.
+- 2026-11-06 — Phase 4.2 (Wave 5): `packages/core` (`@nutribio/core`) created
+  with the pure logic (types, pure locales, countries, calculations,
+  mealTimes, plan, shopping, hash, errors, format, prompt, schema,
+  normalize), source-only, no runtime deps, no DOM/Node libs, injected
+  `Translate` + explicit locale, parse errors as codes. Golden snapshots
+  before/after the move are byte-identical (prompt per locale, inputs hash,
+  targets, normalization, shopping); build + browser checks green.
+  DECISIONS #35. Wave 5 complete.

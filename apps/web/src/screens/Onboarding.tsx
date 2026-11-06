@@ -4,29 +4,30 @@
 import {useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
-import {ChipGroup, Checkbox, Field, NumberInput, Select, TextArea, TextInput} from '../components/Field';
-import {ConfirmDialog} from '../components/ConfirmDialog';
-import {LeafIcon, SparklesIcon} from '../components/icons';
-import {useStore} from '../hooks/useStore';
-import {activeIntlLocale} from '../i18n/locales';
 import {
+  countryOptions,
+  defaultCountryFor,
+  todayKey,
   EXERCISE_TYPE_LABEL_KEYS,
   FREQUENCY_LABEL_KEYS,
   GOAL_LABEL_KEYS,
   INTENSITY_LABEL_KEYS,
   SEX_LABEL_KEYS,
-} from '../lib/calculations';
-import {countryOptions, defaultCountryFor, type CountryCode} from '../lib/countries';
-import {todayKey} from '../lib/mealTimes';
-import type {
-  BioRecord,
-  ExerciseFrequency,
-  ExerciseIntensity,
-  ExerciseType,
-  Goal,
-  Sex,
-  Supplements,
-} from '../types';
+  type BioRecord,
+  type CountryCode,
+  type ExerciseFrequency,
+  type ExerciseIntensity,
+  type ExerciseType,
+  type Goal,
+  type Sex,
+  type Supplements,
+} from '@nutribio/core';
+
+import {ChipGroup, Checkbox, Field, NumberInput, Select, TextArea, TextInput} from '../components/Field';
+import {ConfirmDialog} from '../components/ConfirmDialog';
+import {LeafIcon, SparklesIcon} from '../components/icons';
+import {useStore} from '../hooks/useStore';
+import {activeIntlLocale, activeLocale} from '../i18n/locales';
 
 interface FormState {
   name: string;
@@ -101,7 +102,7 @@ export function Onboarding({onDone, onBack}: {onDone: () => void; onBack?: () =>
     weight: '',
     goal: 'lose_fat',
     // Preselect from the device region / app locale (DECISIONS #26).
-    country: defaultCountryFor(navigator.languages ?? [navigator.language]),
+    country: defaultCountryFor(navigator.languages ?? [navigator.language], activeLocale()),
     supplements: {wheyProtein: false, creatine: false},
     exerciseActive: false,
     frequency: 'none',

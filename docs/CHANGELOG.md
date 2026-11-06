@@ -6,6 +6,56 @@ how the app works is documented in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
 
 ---
 
+## 2026-11-06 — `packages/core`: shared pure logic extracted (roadmap item 4, phase 4.2)
+
+The domain logic the future Nuxt API must reuse (targets, prompt, schema,
+normalization, shopping math) now lives in a shared package instead of the web
+app. **Zero behavior change** (DECISIONS #35).
+
+- New workspace **`packages/core` (`@nutribio/core`)** — source-only
+  (`exports: "./src/index.ts"`, no build step, `sideEffects: false`), **no
+  runtime dependencies** and **no DOM/Node globals** (`lib: ES2022`,
+  `types: []`, checked by the web build). Modules: `types`, `locales`,
+  `countries`, `format`, `mealTimes`, `calculations`, `plan`, `shopping`,
+  `hash`, `errors`, `prompt`, `schema`, `normalize`, `translate` + barrel.
+- **Moved out of `apps/web/src/lib`**: `calculations`, `countries`,
+  `mealTimes`, `plan`, `shopping`, `hash`, `errors`, and the pure half of
+  `gemini.ts` (`COUNTRY_CUISINE_HINTS` + `buildPrompt` → `prompt.ts`,
+  `PLAN_SCHEMA`/`SHOPPING_CATEGORIES` → `schema.ts`, `normalizeWeek`/
+  `normalizeShoppingItems`/`extractJson` → `normalize.ts` +
+  `parsePlanResponse`). Domain types moved to core; `apps/web/src/types.ts`
+  keeps only `Settings` + `TabId`.
+- **No hidden state**: the locale is an explicit parameter
+  (`buildPrompt({locale})`, `formatNumber(…, intlLocale)`,
+  `defaultCountryFor(candidates, locale)`) and label lookups take an injected
+  `Translate` (`computeTargets(input, t)`, `mealLabel`, `emptyMealSlot`,
+  `normalizeWeek`, `startsInLabel`); the new `apps/web/src/i18n/translate.ts`
+  exports `coreT` (i18next adapter). The mutable active-locale tracker stays in
+  the web app.
+- **Errors as codes**: `PlanParseError` (`emptyResponse`, `unparseable`,
+  `badResponse`, `emptyPlan`); `apps/web/src/lib/gemini.ts` (now just the SDK
+  call + retry) maps them to the same `errors.*` messages as before.
+- Root `tsconfig.base.json` shared by `apps/web` and `packages/core`;
+  `apps/web`'s `build` runs `tsc --noEmit -p ../../packages/core` before its
+  own type-check; `npm run typecheck -w @nutribio/core` added. The removed
+  duplicate `WEEK_ORDER` (mealTimes) leaves a single definition in `plan.ts`.
+- `describeError` is now imported statically from core in Settings (the lazy
+  `errors-*.js` chunk is gone).
+- **Verified with golden snapshots** (esbuild scratch scripts, before/after):
+  byte-identical JSON for prompts (3 profiles × 4 locales), `computeTargets`
+  (4 fixtures), `planInputsHash` (cached plans do **not** go stale),
+  `normalizeWeek`/`normalizeShoppingItems` (incl. malformed input), the
+  shopping list + quantity labels, `workoutMealIds` for all 1440 minutes,
+  `resolveLocale`/`defaultCountryFor` matrices, number formatting per locale
+  and every error path; `parsePlanResponse` re-checked on plain/fenced/prose/
+  garbage/empty payloads. Build green (i18n parity, core + web strict TS);
+  chunk layout unchanged (prompt/schema stay in the lazy `gemini` chunk, SDK
+  in its own lazy chunk, 6 catalogs lazy). Browser (existing profile + plan):
+  no stale banner (hash unchanged), Today/Plano/Compras/Progresso/Dados
+  render, Settings shows the static model fallback, language switch to de
+  works and persists, "Sim, gerar plano" without a key shows the localized
+  "Sem chave da API Gemini" toast, layouts fine at 390×844 and 1440×900.
+
 ## 2026-11-06 — Monorepo conversion (roadmap item 4, phase 4.1, Wave 5)
 
 Repository restructured into an npm-workspaces monorepo so the backend era
